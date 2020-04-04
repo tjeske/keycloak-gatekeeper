@@ -67,9 +67,9 @@ import (
 
 // hauptstruct
 type oauthProxy struct {
-	client *oidc.Client
-	config *Config
-	//endpoint       *url.URL
+	client         *oidc.Client
+	config         *Config
+	endpoint       *url.URL
 	idp            oidc.ProviderConfig
 	idpClient      *http.Client
 	listener       net.Listener
@@ -79,7 +79,7 @@ type oauthProxy struct {
 	server         *http.Server
 	store          storage
 	templates      *template.Template
-	//upstream       reverseProxy
+	upstream       reverseProxy
 }
 
 var rb = NewRingBuffer(100)
@@ -187,8 +187,11 @@ type Profile struct {
 // wird nur von newProxy() aufgerufen
 // createReverseProxy creates a reverse proxy
 func (r *oauthProxy) createReverseProxy() error {
-	r.log.Info("enabled reverse proxy mode, upstream url", zap.String("url", "https://localhost:8000"))
-
+	//r.log.Info("enabled reverse proxy mode, upstream url", zap.String("url", r.config.Upstream))
+	r.log.Info("enabled reverse proxy mode, upstream url", zap.String("url", "foo"))
+	if _, err := r.createUpstreamProxy(r.endpoint); err != nil {
+		return err
+	}
 	engine := chi.NewRouter()
 	engine.MethodNotAllowed(emptyHandler)
 	engine.NotFound(emptyHandler)
@@ -1005,11 +1008,12 @@ func (r *oauthProxy) createUpstreamProxy(upstream *url.URL) (*goproxy.ProxyHttpS
 	// kept in response. This is true for CORS headers ([KEYCOAK-9045])
 	// and for refreshed cookies (htts://github.com/keycloak/keycloak-gatekeeper/pulls/456])
 	proxy.KeepDestinationHeaders = true
-	proxy.Logger = httplog.New(os.Stdout, "", 0)
-	proxy.Verbose = true
+	proxy.Logger = httplog.New(ioutil.Discard, "", 0)
+	proxy.KeepDestinationHeaders = true
+	r.upstream = proxy
 
 	// update the tls configuration of the reverse proxy
-	proxy.Tr = &http.Transport{
+	r.upstream.(*goproxy.ProxyHttpServer).Tr = &http.Transport{
 		Dial:                  dialer,
 		DisableKeepAlives:     !r.config.UpstreamKeepalives,
 		ExpectContinueTimeout: r.config.UpstreamExpectContinueTimeout,

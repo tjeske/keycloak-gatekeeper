@@ -1,4 +1,6 @@
 .DS_store
+__debug_bin
+keycloak-gatekeeper
 node_modules
 dist/
 semantic/

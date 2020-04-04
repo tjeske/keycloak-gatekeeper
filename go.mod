@@ -6,7 +6,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.0
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/armon/go-proxyproto v0.0.0-20180202201750-5b7edb60ff5f
-	github.com/boltdb/bolt v1.3.1
+	github.com/etcd-io/bbolt v1.3.3
 	github.com/codegangsta/negroni v1.0.0 // indirect
 	github.com/coreos/go-oidc v0.0.0-20171020180921-e860bd55bfa7
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
@@ -23,6 +23,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/unrolled/secure v0.0.0-20181221173256-0d6b5bb13069
 	github.com/urfave/cli v1.22.2
+	go.etcd.io/bbolt v1.3.3 // indirect
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1
