@@ -53,12 +53,7 @@ func entrypointMiddleware(next http.Handler) http.Handler {
 		// @step: create a context for the request
 		scope := &RequestScope{}
 		resp := middleware.NewWrapResponseWriter(w, 1)
-		start := time.Now()
 		next.ServeHTTP(resp, req.WithContext(context.WithValue(req.Context(), contextScopeName, scope)))
-
-		// @metric record the time taken then response code
-		latencyMetric.Observe(time.Since(start).Seconds())
-		statusMetric.WithLabelValues(fmt.Sprintf("%d", resp.Status()), req.Method).Inc()
 
 		// place back the original uri for proxying request
 		req.URL.Path = keep

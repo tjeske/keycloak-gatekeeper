@@ -56,8 +56,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/phayes/freeport"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
 	"github.com/tjeske/containerflight/util"
 	"github.com/tjeske/keycloak-gatekeeper/backend"
@@ -67,19 +65,18 @@ import (
 
 // hauptstruct
 type oauthProxy struct {
-	client         *oidc.Client
-	config         *Config
-	endpoint       *url.URL
-	idp            oidc.ProviderConfig
-	idpClient      *http.Client
-	listener       net.Listener
-	log            *zap.Logger
-	metricsHandler http.Handler
-	router         http.Handler
-	server         *http.Server
-	store          storage
-	templates      *template.Template
-	upstream       reverseProxy
+	client    *oidc.Client
+	config    *Config
+	endpoint  *url.URL
+	idp       oidc.ProviderConfig
+	idpClient *http.Client
+	listener  net.Listener
+	log       *zap.Logger
+	router    http.Handler
+	server    *http.Server
+	store     storage
+	templates *template.Template
+	upstream  reverseProxy
 }
 
 var rb = NewRingBuffer(100)
@@ -87,11 +84,6 @@ var rb = NewRingBuffer(100)
 func init() {
 	_, _ = time.LoadLocation("UTC")      // ensure all time is in UTC [NOTE(fredbi): no this does just nothing]
 	runtime.GOMAXPROCS(runtime.NumCPU()) // set the core
-	prometheus.MustRegister(certificateRotationMetric)
-	prometheus.MustRegister(latencyMetric)
-	prometheus.MustRegister(oauthLatencyMetric)
-	prometheus.MustRegister(oauthTokensMetric)
-	prometheus.MustRegister(statusMetric)
 }
 
 // newProxy create's a new proxy from configuration
@@ -104,9 +96,8 @@ func newProxy(config *Config) (*oauthProxy, error) {
 
 	log.Info("starting the service", zap.String("prog", prog), zap.String("author", author), zap.String("version", version))
 	svc := &oauthProxy{
-		config:         config,
-		log:            log,
-		metricsHandler: promhttp.Handler(),
+		config: config,
+		log:    log,
 	}
 
 	// // parse the upstream endpoint
@@ -243,10 +234,6 @@ func (r *oauthProxy) createReverseProxy() error {
 		e.With(r.authenticationMiddleware()).Get(logoutURL, r.logoutHandler)
 		e.With(r.authenticationMiddleware()).Get(tokenURL, r.tokenHandler)
 		e.Post(loginURL, r.loginHandler) // /oauth/login
-		if r.config.EnableMetrics {
-			r.log.Info("enabled the service metrics middleware", zap.String("path", r.config.WithOAuthURI(metricsURL)))
-			e.Get(metricsURL, r.proxyMetricsHandler)
-		}
 	})
 	engine.With(proxyDenyMiddleware).Get("/admin", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/", 301)
@@ -618,7 +605,7 @@ func (r *oauthProxy) createReverseProxy() error {
 // 		if resp != nil && r.config.EnableLogging {
 // 			start := ctx.UserData.(time.Time)
 // 			latency := time.Since(start)
-// 			latencyMetric.Observe(latency.Seconds())
+// 			latency.Observe(latency.Seconds())
 // 			r.log.Info("client request",
 // 				zap.String("method", resp.Request.Method),
 // 				zap.String("path", resp.Request.URL.Path),

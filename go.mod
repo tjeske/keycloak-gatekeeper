@@ -89,7 +89,6 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2-0.20190207185410-29686dbc5559 // indirect
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
-	github.com/prometheus/client_golang v0.8.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/afero v1.1.2
 	github.com/spf13/cobra v0.0.3

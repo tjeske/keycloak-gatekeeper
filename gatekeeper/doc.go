@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/jose"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -53,7 +52,6 @@ const (
 	healthURL        = "/health"
 	loginURL         = "/login"
 	logoutURL        = "/logout"
-	metricsURL       = "/metrics"
 	tokenURL         = "/token"
 	debugURL         = "/debug/pprof"
 
@@ -81,42 +79,6 @@ const (
 const (
 	headerXForwardedFor = "X-Forwarded-For"
 	headerXRealIP       = "X-Real-IP"
-)
-
-var (
-	certificateRotationMetric = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "proxy_certificate_rotation_total",
-			Help: "The total amount of times the certificate has been rotated",
-		},
-	)
-	oauthTokensMetric = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "proxy_oauth_tokens_total",
-			Help: "A summary of the tokens issuesd, renewed or failed logins",
-		},
-		[]string{"action"},
-	)
-	oauthLatencyMetric = prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Name: "proxy_oauth_request_latency_sec",
-			Help: "A summary of the request latancy for requests against the openid provider",
-		},
-		[]string{"action"},
-	)
-	latencyMetric = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "proxy_request_duration_sec",
-			Help: "A summary of the http request latency for proxy requests",
-		},
-	)
-	statusMetric = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "proxy_request_status_total",
-			Help: "The HTTP requests partitioned by status code",
-		},
-		[]string{"code", "method"},
-	)
 )
 
 var (
@@ -238,8 +200,6 @@ type Config struct {
 	EnableHTTPSRedirect bool `json:"enable-https-redirection" yaml:"enable-https-redirection" usage:"enable the http to https redirection on the http service"`
 	// EnableProfiling indicates if profiles is switched on
 	EnableProfiling bool `json:"enable-profiling" yaml:"enable-profiling" usage:"switching on the golang profiling via pprof on /debug/pprof, /debug/pprof/heap etc"`
-	// EnableMetrics indicates if the metrics is enabled
-	EnableMetrics bool `json:"enable-metrics" yaml:"enable-metrics" usage:"enable the prometheus metrics collector on /oauth/metrics"`
 	// EnableBrowserXSSFilter indicates you want the filter on
 	EnableBrowserXSSFilter bool `json:"filter-browser-xss" yaml:"filter-browser-xss" usage:"enable the adds the X-XSS-Protection header with mode=block"`
 	// EnableContentNoSniff indicates you want the filter on
@@ -248,8 +208,6 @@ type Config struct {
 	EnableFrameDeny bool `json:"filter-frame-deny" yaml:"filter-frame-deny" usage:"enable to the frame deny header"`
 	// ContentSecurityPolicy allows the Content-Security-Policy header value to be set with a custom value
 	ContentSecurityPolicy string `json:"content-security-policy" yaml:"content-security-policy" usage:"specify the content security policy"`
-	// LocalhostMetrics indicated the metrics can only be consume via localhost
-	LocalhostMetrics bool `json:"localhost-metrics" yaml:"localhost-metrics" usage:"enforces the metrics page can only been requested from 127.0.0.1"`
 
 	// AccessTokenDuration is default duration applied to the access token cookie
 	AccessTokenDuration time.Duration `json:"access-token-duration" yaml:"access-token-duration" usage:"fallback cookie duration for the access token when using refresh tokens"`
