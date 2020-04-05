@@ -104,27 +104,6 @@ func TestReverseProxyHeaders(t *testing.T) {
 	p.RunTests(t, requests)
 }
 
-func TestForwardingProxy(t *testing.T) {
-	cfg := newFakeKeycloakConfig()
-	cfg.EnableForwarding = true
-	cfg.ForwardingDomains = []string{}
-	cfg.ForwardingUsername = validUsername
-	cfg.ForwardingPassword = validPassword
-	s := httptest.NewServer(&fakeUpstreamService{})
-	requests := []fakeRequest{
-		{
-			URL:                     s.URL + "/test",
-			ProxyRequest:            true,
-			ExpectedProxy:           true,
-			ExpectedCode:            http.StatusOK,
-			ExpectedContentContains: "Bearer ey",
-		},
-	}
-	p := newFakeProxy(cfg)
-	<-time.After(time.Duration(100) * time.Millisecond)
-	p.RunTests(t, requests)
-}
-
 func TestForbiddenTemplate(t *testing.T) {
 	cfg := newFakeKeycloakConfig()
 	cfg.ForbiddenPage = "templates/forbidden.html.tmpl"

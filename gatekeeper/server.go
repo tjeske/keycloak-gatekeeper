@@ -127,14 +127,8 @@ func newProxy(config *Config) (*oauthProxy, error) {
 	}
 
 	// are we running in forwarding mode?
-	if config.EnableForwarding {
-		// if err := svc.createForwardingProxy(); err != nil {
-		// 	return nil, err
-		// }
-	} else {
-		if err := svc.createReverseProxy(); err != nil {
-			return nil, err
-		}
+	if err := svc.createReverseProxy(); err != nil {
+		return nil, err
 	}
 
 	return svc, nil
@@ -562,75 +556,9 @@ func (r *oauthProxy) createReverseProxy() error {
 	return nil
 }
 
-// // createForwardingProxy creates a forwarding proxy
-// func (r *oauthProxy) createForwardingProxy() error {
-// 	r.log.Info("enabling forward signing mode, listening on", zap.String("interface", r.config.Listen))
-
-// 	if r.config.SkipUpstreamTLSVerify {
-// 		r.log.Warn("tls verification switched off. In forward signing mode it's recommended you verify! (--skip-upstream-tls-verify=false)")
-// 	}
-// 	if err := r.createUpstreamProxy(nil); err != nil {
-// 		return err
-// 	}
-// 	//nolint:bodyclose
-// 	forwardingHandler := r.forwardProxyHandler()
-
-// 	// set the http handler
-// 	proxy := r.upstream.(*goproxy.ProxyHttpServer)
-// 	r.router = proxy
-
-// 	// setup the tls configuration
-// 	if r.config.TLSCaCertificate != "" && r.config.TLSCaPrivateKey != "" {
-// 		ca, err := loadCA(r.config.TLSCaCertificate, r.config.TLSCaPrivateKey)
-// 		if err != nil {
-// 			return fmt.Errorf("unable to load certificate authority, error: %s", err)
-// 		}
-
-// 		// implement the goproxy connect method
-// 		proxy.OnRequest().HandleConnectFunc(
-// 			func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
-// 				return &goproxy.ConnectAction{
-// 					Action:    goproxy.ConnectMitm,
-// 					TLSConfig: goproxy.TLSConfigFromCA(ca),
-// 				}, host
-// 			},
-// 		)
-// 	} else {
-// 		// use the default certificate provided by goproxy
-// 		proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
-// 	}
-
-// 	proxy.OnResponse().DoFunc(func(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
-// 		// @NOTES, somewhat annoying but goproxy hands back a nil response on proxy client errors
-// 		if resp != nil && r.config.EnableLogging {
-// 			start := ctx.UserData.(time.Time)
-// 			latency := time.Since(start)
-// 			latency.Observe(latency.Seconds())
-// 			r.log.Info("client request",
-// 				zap.String("method", resp.Request.Method),
-// 				zap.String("path", resp.Request.URL.Path),
-// 				zap.Int("status", resp.StatusCode),
-// 				zap.Int64("bytes", resp.ContentLength),
-// 				zap.String("host", resp.Request.Host),
-// 				zap.String("path", resp.Request.URL.Path),
-// 				zap.String("latency", latency.String()))
-// 		}
-
-// 		return resp
-// 	})
-// 	proxy.OnRequest().DoFunc(func(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-// 		ctx.UserData = time.Now()
-// 		forwardingHandler(req, ctx.Resp)
-// 		return req, ctx.Resp
-// 	})
-
-// 	return nil
-// }
-
 // Run starts the proxy service
 func (r *oauthProxy) Run() error {
 	listener, err := r.createHTTPListener(listenerConfig{
-		ca:                  r.config.TLSCaCertificate,
 		certificate:         r.config.TLSCertificate,
 		clientCert:          r.config.TLSClientCertificate,
 		hostnames:           r.config.Hostnames,

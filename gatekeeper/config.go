@@ -109,9 +109,6 @@ func (r *Config) isValid() error {
 	if r.TLSPrivateKey != "" && !fileExists(r.TLSPrivateKey) {
 		return fmt.Errorf("the tls private key %s does not exist", r.TLSPrivateKey)
 	}
-	if r.TLSCaCertificate != "" && !fileExists(r.TLSCaCertificate) {
-		return fmt.Errorf("the tls ca certificate file %s does not exist", r.TLSCaCertificate)
-	}
 	if r.TLSClientCertificate != "" && !fileExists(r.TLSClientCertificate) {
 		return fmt.Errorf("the tls client certificate %s does not exist", r.TLSClientCertificate)
 	}
@@ -119,96 +116,75 @@ func (r *Config) isValid() error {
 		return fmt.Errorf("the letsencrypt cache dir has not been set")
 	}
 
-	if r.EnableForwarding {
+	// if r.Upstream == "" {
+	// 	return errors.New("you have not specified an upstream endpoint to proxy to")
+	// }
+	// if _, err := url.Parse(r.Upstream); err != nil {
+	// 	return fmt.Errorf("the upstream endpoint is invalid, %s", err)
+	// }
+	if r.SkipUpstreamTLSVerify && r.UpstreamCA != "" {
+		return fmt.Errorf("you cannot skip upstream tls and load a root ca: %s to verify it", r.UpstreamCA)
+	}
+
+	// step: if the skip verification is off, we need the below
+	if !r.SkipTokenVerification {
 		if r.ClientID == "" {
 			return errors.New("you have not specified the client id")
 		}
 		if r.DiscoveryURL == "" {
 			return errors.New("you have not specified the discovery url")
 		}
-		if r.ForwardingUsername == "" {
-			return errors.New("no forwarding username")
+		if strings.HasSuffix(r.RedirectionURL, "/") {
+			r.RedirectionURL = strings.TrimSuffix(r.RedirectionURL, "/")
 		}
-		if r.ForwardingPassword == "" {
-			return errors.New("no forwarding password")
-		}
-		if r.TLSCertificate != "" {
-			return errors.New("you don't need to specify a tls-certificate, use tls-ca-certificate instead")
-		}
-		if r.TLSPrivateKey != "" {
-			return errors.New("you don't need to specify the tls-private-key, use tls-ca-key instead")
-		}
-	} else {
-		// if r.Upstream == "" {
-		// 	return errors.New("you have not specified an upstream endpoint to proxy to")
-		// }
-		// if _, err := url.Parse(r.Upstream); err != nil {
-		// 	return fmt.Errorf("the upstream endpoint is invalid, %s", err)
-		// }
-		if r.SkipUpstreamTLSVerify && r.UpstreamCA != "" {
-			return fmt.Errorf("you cannot skip upstream tls and load a root ca: %s to verify it", r.UpstreamCA)
-		}
-
-		// step: if the skip verification is off, we need the below
-		if !r.SkipTokenVerification {
-			if r.ClientID == "" {
-				return errors.New("you have not specified the client id")
+		if !r.EnableSecurityFilter {
+			if r.EnableHTTPSRedirect {
+				return errors.New("the security filter must be switch on for this feature: http-redirect")
 			}
-			if r.DiscoveryURL == "" {
-				return errors.New("you have not specified the discovery url")
+			if r.EnableBrowserXSSFilter {
+				return errors.New("the security filter must be switch on for this feature: brower-xss-filter")
 			}
-			if strings.HasSuffix(r.RedirectionURL, "/") {
-				r.RedirectionURL = strings.TrimSuffix(r.RedirectionURL, "/")
+			if r.EnableFrameDeny {
+				return errors.New("the security filter must be switch on for this feature: frame-deny-filter")
 			}
-			if !r.EnableSecurityFilter {
-				if r.EnableHTTPSRedirect {
-					return errors.New("the security filter must be switch on for this feature: http-redirect")
-				}
-				if r.EnableBrowserXSSFilter {
-					return errors.New("the security filter must be switch on for this feature: brower-xss-filter")
-				}
-				if r.EnableFrameDeny {
-					return errors.New("the security filter must be switch on for this feature: frame-deny-filter")
-				}
-				if r.ContentSecurityPolicy != "" {
-					return errors.New("the security filter must be switch on for this feature: content-security-policy")
-				}
-				if len(r.Hostnames) > 0 {
-					return errors.New("the security filter must be switch on for this feature: hostnames")
-				}
+			if r.ContentSecurityPolicy != "" {
+				return errors.New("the security filter must be switch on for this feature: content-security-policy")
 			}
-			if (r.EnableEncryptedToken || r.ForceEncryptedCookie) && r.EncryptionKey == "" {
-				return errors.New("you have not specified an encryption key for encoding the access token")
-			}
-			if r.EnableRefreshTokens && r.EncryptionKey == "" {
-				return errors.New("you have not specified an encryption key for encoding the session state")
-			}
-			if r.EnableRefreshTokens && (len(r.EncryptionKey) != 16 && len(r.EncryptionKey) != 32) {
-				return fmt.Errorf("the encryption key (%d) must be either 16 or 32 characters for AES-128/AES-256 selection", len(r.EncryptionKey))
-			}
-			if !r.NoRedirects && r.SecureCookie && r.RedirectionURL != "" && !strings.HasPrefix(r.RedirectionURL, "https") {
-				return errors.New("the cookie is set to secure but your redirection url is non-tls")
-			}
-			if r.StoreURL != "" {
-				if _, err := url.Parse(r.StoreURL); err != nil {
-					return fmt.Errorf("the store url is invalid, error: %s", err)
-				}
-			}
-			if r.ClientAuthMethod != authMethodBasic && r.ClientAuthMethod != authMethodBody {
-				return fmt.Errorf("invalid client auth method %q (valid values: %s, %s)", r.ClientAuthMethod, authMethodBasic, authMethodBody)
+			if len(r.Hostnames) > 0 {
+				return errors.New("the security filter must be switch on for this feature: hostnames")
 			}
 		}
-		// check: ensure each of the resource are valid
-		for _, resource := range r.Resources {
-			if err := resource.valid(); err != nil {
-				return err
+		if (r.EnableEncryptedToken || r.ForceEncryptedCookie) && r.EncryptionKey == "" {
+			return errors.New("you have not specified an encryption key for encoding the access token")
+		}
+		if r.EnableRefreshTokens && r.EncryptionKey == "" {
+			return errors.New("you have not specified an encryption key for encoding the session state")
+		}
+		if r.EnableRefreshTokens && (len(r.EncryptionKey) != 16 && len(r.EncryptionKey) != 32) {
+			return fmt.Errorf("the encryption key (%d) must be either 16 or 32 characters for AES-128/AES-256 selection", len(r.EncryptionKey))
+		}
+		if !r.NoRedirects && r.SecureCookie && r.RedirectionURL != "" && !strings.HasPrefix(r.RedirectionURL, "https") {
+			return errors.New("the cookie is set to secure but your redirection url is non-tls")
+		}
+		if r.StoreURL != "" {
+			if _, err := url.Parse(r.StoreURL); err != nil {
+				return fmt.Errorf("the store url is invalid, error: %s", err)
 			}
 		}
-		// step: validate the claims are validate regex's
-		for k, claim := range r.MatchClaims {
-			if _, err := regexp.Compile(claim); err != nil {
-				return fmt.Errorf("the claim matcher: %s for claim: %s is not a valid regex", claim, k)
-			}
+		if r.ClientAuthMethod != authMethodBasic && r.ClientAuthMethod != authMethodBody {
+			return fmt.Errorf("invalid client auth method %q (valid values: %s, %s)", r.ClientAuthMethod, authMethodBasic, authMethodBody)
+		}
+	}
+	// check: ensure each of the resource are valid
+	for _, resource := range r.Resources {
+		if err := resource.valid(); err != nil {
+			return err
+		}
+	}
+	// step: validate the claims are validate regex's
+	for k, claim := range r.MatchClaims {
+		if _, err := regexp.Compile(claim); err != nil {
+			return fmt.Errorf("the claim matcher: %s for claim: %s is not a valid regex", claim, k)
 		}
 	}
 
