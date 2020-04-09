@@ -98,7 +98,6 @@ func (r *oauthProxy) authenticationMiddleware() func(http.Handler) http.Handler 
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			clientIP := req.RemoteAddr
 			// grab the user identity from the request
-			fmt.Printf("-> %v", req)
 			user, err := r.getIdentity(req)
 			if err != nil {
 				r.log.Error("no session found in request, redirecting for authorization", zap.Error(err))

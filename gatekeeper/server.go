@@ -20,8 +20,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -45,25 +43,18 @@ import (
 
 	httplog "log"
 
-	"github.com/Nerzal/gocloak/v4"
 	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/coreos/go-oidc/oidc"
-	"github.com/docker/go-units"
 	"github.com/elazarl/goproxy"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/docgen"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/phayes/freeport"
 	"github.com/rs/cors"
 	"github.com/tjeske/containerflight/util"
-	"github.com/tjeske/keycloak-gatekeeper/backend"
-	storge "github.com/tjeske/keycloak-gatekeeper/storage"
 	"go.uber.org/zap"
 )
 
-// hauptstruct
 type oauthProxy struct {
 	client    *oidc.Client
 	config    *Config
@@ -159,16 +150,6 @@ func createLogger(config *Config) (*zap.Logger, error) {
 	return c.Build()
 }
 
-// für /searchUser
-type Answer struct {
-	Results []Profile `json:"results"`
-}
-
-type Profile struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
 // wird nur von newProxy() aufgerufen
 // createReverseProxy creates a reverse proxy
 func (r *oauthProxy) createReverseProxy() error {
@@ -228,231 +209,6 @@ func (r *oauthProxy) createReverseProxy() error {
 		e.With(r.authenticationMiddleware()).Get(logoutURL, r.logoutHandler)
 		e.With(r.authenticationMiddleware()).Get(tokenURL, r.tokenHandler)
 		e.Post(loginURL, r.loginHandler) // /oauth/login
-	})
-	engine.With(proxyDenyMiddleware).Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/admin/", 301)
-	})
-
-	fs := http.StripPrefix("/admin", http.FileServer(http.Dir("frontend/dist")))
-	engine.With(r.authenticationMiddleware(), proxyDenyMiddleware).Get("/admin/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fs.ServeHTTP(w, r)
-	}))
-
-	engine.With(proxyDenyMiddleware).Get("/getTemplates", func(w http.ResponseWriter, req *http.Request) {
-		apps := storageProvider.ReturnAllApps()
-		js, err := json.Marshal(struct {
-			Data []*storge.App `json:"data"`
-		}{apps})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(js)
-	})
-
-	engine.With(r.authenticationMiddleware(), r.identityHeadersMiddleware(r.config.AddClaims)).Get("/foo", func(w http.ResponseWriter, req *http.Request) {
-		apps := storageProvider.ReturnAllApps()
-		js, err := json.Marshal(struct {
-			Data []*storge.App `json:"data"`
-		}{apps})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(js)
-	})
-
-	engine.With(r.authenticationMiddleware(),
-		r.identityHeadersMiddleware(r.config.AddClaims)).Get("/test", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "Hello, %s!", req.URL.Path[1:])
-	})
-
-	engine.With(r.authenticationMiddleware(),
-		r.identityHeadersMiddleware(r.config.AddClaims)).Get("/startApp", func(w http.ResponseWriter, req *http.Request) {
-
-		for k, v := range req.URL.Query() {
-			fmt.Printf("%s: %s\n", k, v)
-		}
-
-		apps := storageProvider.ReturnAllApps()
-		js, err := json.Marshal(struct {
-			Data []*storge.App `json:"data"`
-		}{apps})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		templateName := req.URL.Query().Get("templateName")
-		container := storageProvider.GetAppConfigByName(templateName)
-		if container == nil {
-			// cannot find container
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		port, err := freeport.GetFreePort()
-		if err != nil {
-			log.Fatal(err)
-		}
-		args := make(map[string]string)
-
-		user, err := r.getIdentity(req)
-		if err != nil {
-			fmt.Println(req)
-		}
-		args["user"] = user.name
-		uuid := uuid.New().String()
-		name := req.URL.Query().Get("name")
-		dockerRunArgs := []string{
-			"-d",
-			"-p", strconv.Itoa(port) + ":" + strconv.Itoa(container.InternalPort),
-			"--label", "udesk_uuid=" + uuid,
-			"--label", "udesk_entry_port=" + strconv.Itoa(port),
-			"--label", "udesk_owner=" + user.name,
-			"--label", "udesk_name=" + name,
-		}
-
-		// rb.Input <- "blah"
-		// rb.Flush() // if needed-- useful for testing
-
-		var dc = backend.NewDockerClientWithWriter("1.2.3", rb)
-		go dc.Run(container.Name, user.name, args, container, dockerRunArgs, []string{})
-
-		runtimeCache[userContainer{user: user.name, container: container}] = port
-		time.Sleep(1 * time.Second)
-		fmt.Println()
-		r.dropCookie(w, req.Host, "udesk_current_app", uuid, 0)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(js)
-	})
-
-	engine.With(proxyDenyMiddleware).Get("/removeApp/{query}", func(w http.ResponseWriter, req *http.Request) {
-		containerID := chi.URLParam(req, "query")
-		err := dockerClient.RemoveContainer(containerID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	engine.With(proxyDenyMiddleware).Get("/pauseApp/{query}", func(w http.ResponseWriter, req *http.Request) {
-		containerID := chi.URLParam(req, "query")
-		err := dockerClient.PauseContainer(containerID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	engine.With(proxyDenyMiddleware).Get("/unpauseApp/{query}", func(w http.ResponseWriter, req *http.Request) {
-		containerID := chi.URLParam(req, "query")
-		err := dockerClient.UnpauseContainer(containerID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	engine.With(proxyDenyMiddleware).Get("/switchApp/{query}", func(w http.ResponseWriter, req *http.Request) {
-		containerID := chi.URLParam(req, "query")
-		fmt.Println(containerID)
-		r.dropCookie(w, req.Host, "udesk_current_app", containerID, 0)
-		fmt.Println(req.Host)
-		http.Redirect(w, req, "http://"+req.Host, http.StatusSeeOther)
-	})
-
-	engine.With(proxyDenyMiddleware).Get("/dockerStatus", func(w http.ResponseWriter, req *http.Request) {
-
-		containers := dockerClient.GetStatus()
-		y := [][]string{}
-		for _, container := range containers {
-
-			t := time.Unix(container.Created, 0)
-
-			// name
-			name := "UNKNOWN"
-			if nameLabel, ok := container.Labels["udesk_name"]; ok {
-				name = nameLabel
-			}
-
-			// owner
-			owner := "UNKNOWN"
-			if ownerLabel, ok := container.Labels["udesk_owner"]; ok {
-				owner = ownerLabel
-			}
-
-			// entrypoint
-			uuid := "UNKNOWN"
-			if entryPointLabel, ok := container.Labels["udesk_uuid"]; ok {
-				uuid = entryPointLabel
-			}
-
-			y = append(y, []string{
-				name,
-				owner,
-				units.HumanDuration(time.Now().UTC().Sub(t)) + " ago",
-				container.State,
-				uuid,
-			})
-		}
-
-		js, err := json.Marshal(struct {
-			Data [][]string `json:"data"`
-		}{y})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(js)
-	})
-
-	engine.With(proxyDenyMiddleware).Get("/searchUser/{query}", func(w http.ResponseWriter, req *http.Request) {
-
-		u, err := r.getIdentity(req)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		client := gocloak.NewClient("http://auth.familie-jeske.net:7080/")
-		token := u.token.RawHeader + "." + u.token.RawPayload + "." + strings.TrimRight(base64.URLEncoding.EncodeToString(u.token.Signature), "=")
-		users, err := client.GetUsers(
-			token,
-			"master",
-			gocloak.GetUsersParams{})
-
-		filteredUserOrGroups := []Profile{}
-		for _, user := range users {
-			if strings.HasPrefix(strings.ToLower(*user.Username), strings.ToLower(chi.URLParam(req, "query"))) {
-				description := ""
-				if user.FirstName != nil {
-					description += *user.FirstName
-				}
-				if user.LastName != nil {
-					if description != "" {
-						description += " "
-					}
-					description += *user.LastName
-				}
-				if description != "" {
-					description = *user.Username
-				}
-				filteredUserOrGroups = append(filteredUserOrGroups, Profile{*user.Username, description})
-			}
-		}
-
-		js, err := json.Marshal(Answer{filteredUserOrGroups})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(js)
 	})
 
 	var upgrader = websocket.Upgrader{

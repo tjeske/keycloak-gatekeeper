@@ -67,10 +67,13 @@ func NewOauthProxyApp() *cli.App {
 		}
 
 		// step: create the proxy
+		var udeskProxy = &udeskOauthProxy{}
 		proxy, err := newProxy(config)
 		if err != nil {
 			return printError(err.Error())
 		}
+		udeskProxy.oauthProxy = proxy
+		udeskProxy.createReverseProxy()
 
 		// step: start the service
 		if err := proxy.Run(); err != nil {
