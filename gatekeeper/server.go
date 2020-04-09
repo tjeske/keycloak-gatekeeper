@@ -307,12 +307,14 @@ func (r *oauthProxy) createReverseProxy() error {
 		}
 		args["user"] = user.name
 		uuid := uuid.New().String()
+		name := req.URL.Query().Get("name")
 		dockerRunArgs := []string{
 			"-d",
 			"-p", strconv.Itoa(port) + ":" + strconv.Itoa(container.InternalPort),
 			"--label", "udesk_uuid=" + uuid,
 			"--label", "udesk_entry_port=" + strconv.Itoa(port),
 			"--label", "udesk_owner=" + user.name,
+			"--label", "udesk_name=" + name,
 		}
 
 		// rb.Input <- "blah"
@@ -370,15 +372,10 @@ func (r *oauthProxy) createReverseProxy() error {
 			t := time.Unix(container.Created, 0)
 
 			// name
-			var processedNames []string
-			for _, name := range container.Names {
-				if strings.HasPrefix(name, "/") {
-					processedNames = append(processedNames, name[1:])
-				} else {
-					processedNames = append(processedNames, name)
-				}
+			name := "UNKNOWN"
+			if nameLabel, ok := container.Labels["udesk_name"]; ok {
+				name = nameLabel
 			}
-			name := strings.Join(processedNames, ",")
 
 			// owner
 			owner := "UNKNOWN"
