@@ -1,0 +1,64 @@
+version: "3.6"
+
+services:
+  # traefik:
+  #   image: traefik:v1.7.4-alpine
+  #   hostname: familie-jeske.net
+  #   environment:
+  #     TZ: Europe/Zurich
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: >
+  #     --logLevel='DEBUG'
+  #     --dashboard=true
+  #     --api.dashboard=true
+  #     --InsecureSkipVerify=true
+  #     --entryPoints='Name:http Address::80 Redirect.EntryPoint:https'
+  #     --entryPoints='Name:https Address::443 TLS'
+  #     --defaultentrypoints='http,https'
+  #     --docker
+  #     --docker.exposedbydefault=true
+  #     --docker.watch=true
+  #     --docker.swarmmode=false
+  #     --docker.endpoint='unix:///var/run/docker.sock'
+  #   networks:
+  #     transit_idp:
+  #     transit_ccb:
+  #   labels:
+  #     traefik.enable: true
+
+  # keycloak-gatekeeper:
+  #   image: ccb:latest
+  #   labels:
+  #    - "traefik.port=3000"
+  #    - "traefik.frontend.rule=Host:eclipse.familie-jeske.net"
+  #    - "traefik.frontend.rule=Host:python.familie-jeske.net"
+  #    - "traefik.frontend.rule=Host:ttyd.familie-jeske.net"
+  #    - "traefik.frontend.rule=Host:vscode.familie-jeske.net"
+  #    - "traefik.protocol=http"
+  #   networks:
+  #     transit_ccb:
+  #   external_links:
+  #     - traefik:auth.familie-jeske.net
+
+  mongodb:
+    image: mongo:latest
+    environment:
+        - MONGO_INITDB_ROOT_USERNAME=admin
+        - MONGO_INITDB_ROOT_PASSWORD=password
+        - MONGO_INITDB_DATABASE=ccb
+    ports:
+      - "27017:27017" 
+    labels:
+      - "traefik.enable=false"
+
+
+networks:
+  transit_idp:
+    external: true
+  transit_ccb:
+    external: true
+

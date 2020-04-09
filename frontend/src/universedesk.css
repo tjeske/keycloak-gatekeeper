@@ -1,0 +1,21 @@
+/* make contenteditable work in Safari */
+[contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+#params-table tr td {
+    border-top: 0px !important;
+}
+
+#files-table tr td {
+    border-top: 0px !important;
+}
+
+#access-table tr td {
+    border-top: 0px !important;
+}
+
+.green-row {
+    background-color: green !important;
+}

@@ -17,9 +17,54 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+
+	"github.com/sirupsen/logrus"
+	"github.com/tjeske/containerflight/util"
+	"github.com/tjeske/keycloak-gatekeeper/config"
+	"github.com/tjeske/keycloak-gatekeeper/gatekeeper"
+	"github.com/tjeske/keycloak-gatekeeper/storage"
 )
 
+var log = logrus.New()
+
 func main() {
-	app := newOauthProxyApp()
+	log.Level = logrus.DebugLevel
+
+	// determine directory of executable
+	executableDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	util.CheckErr(err)
+
+	// read config
+	cfg := config.NewConfig(executableDir + "/config.conf")
+
+	// configure storage backend
+	storageType := cfg.Storage.Type
+	switch storageType {
+	case "file":
+		{
+			fileProvider := storage.NewFileProvider(executableDir + "/apps.conf")
+			storage.SetProvider(fileProvider)
+
+			gatekeeper.SetStorageProvider(fileProvider)
+		}
+	case "mongodb":
+		{
+			mongoDbConfig := cfg.Storage.MongoDb
+			mongoDbProvider := storage.NewMongoDbProvider(mongoDbConfig.GetMongoDbHost(), mongoDbConfig.GetMongoDbUser(), mongoDbConfig.GetMongoDbPassword(), mongoDbConfig.GetMongoDbDataBase())
+			storage.SetProvider(mongoDbProvider)
+		}
+	default:
+		{
+			log.Fatal("Storage backend unknown")
+		}
+	}
+
+	apps := storage.Provider.ReturnAllApps()
+	for _, app := range apps {
+		log.Println(app.Name)
+	}
+
+	app := gatekeeper.NewOauthProxyApp()
 	_ = app.Run(os.Args)
 }

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Universe Desk - Control Panel</title>
+</head>
+
+<body>
+    <div class="ui container">
+
+        <div class="ui three item menu">
+            <a href="controlpanel.html" class="active item">Control Panel</a>
+            <a href="templates.html" class="item">Templates</a>
+            <a href="/logout" class="item">Logout</a>
+        </div>
+
+        <div class="ui bottom attached segment">
+            <div class="field">
+                <table class="ui very basic collapsing table">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <select class="ui dropdown" id="app-dropdown">
+                                </select>
+                            </td>
+                            <td>
+                                <button class="ui icon positive button" id="start-new-app-btn"><i
+                                        class="play icon"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                <table class="ui celled table dataTable" id="app-status-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Owner</th>
+                            <th>Created</th>
+                            <th>Status</th>
+                            <th>Control</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="terminal"></div>
+        </div>
+    </div>
+
+    <!-- *** MODALS *** -->
+    <!-- add new application -->
+    <div class="ui modal" id="start-app-modal">
+        <i class="close icon"></i>
+        <div class="header">
+            Start new application
+        </div>
+        <div class="field">
+            <label>Parameters</label>
+            <table class="ui very basic collapsing table" id="params-table">
+                <tbody id="params-table-body">
+                    <tr>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="ui icon top button" id="add-new-parameter-btn">
+                <i class="plus icon"></i>
+            </div>
+        </div>
+        <div class="actions">
+            <div class="ui black deny button">
+                Cancel
+            </div>
+            <div class="ui positive right labeled icon button" id="btn-new-app-ok">
+                Start
+                <i class="checkmark icon"></i>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

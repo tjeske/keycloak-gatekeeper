@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<!-- saved from url=(0053)https://www.w3.org/Style/Examples/007/sliding.en.html -->
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>CSS: a sliding menu</title>
+    <style type="text/css">
+        #menu {
+            position: fixed;
+            right: -16em;
+            top: 50%;
+            width: 18em;
+            margin: 0 0 0 0;
+            transform: translate(0, -50%);
+            z-index: 5;
+            /* background: hsla(80, 90%, 40%, 0.7); */
+            text-align: left;
+            /* border: solid hsla(80, 90%, 40%, 0.5); */
+            /* border-right: none; */
+            /* padding: 0.5em 0.5em 0.5em 2.5em;
+            box-shadow: 0 1px 3px black;
+            border-radius: 3em 0.5em 0.5em 3em; */
+            transition: 0.2s;
+            /* margin: 0;
+       transform: translate(0, -50%); */
+        }
+
+        #menu:hover {
+            right: -3em
+        }
+    </style>
+<link href="style.d9c1803324b9e7afcaf9.css" rel="stylesheet"></head>
+
+<body>
+    <div class="ui segments piled">
+        <div class="ui segment">
+            <form class="ui transparent icon input fluid">
+                <i class="icon edit"></i>
+                <input type="text" name="text" placeholder="Add List">
+            </form>
+        </div>
+        <div class="ui segment listitem block">
+            <span class="text"> Text</span>
+            <img src='http://icons.iconarchive.com/icons/icons8/ios7/512/Users-User-Male-icon.png'
+                style='width:20px;float: right;'>
+        </div>
+    </div>
+
+
+
+    <div id="menu">
+        <div class="ui vertical menu" style="border-width: 2px;border-left-width: 10px;border-right-width: 0px;border-top-right-radius: 0;border-bottom-right-radius: 0">
+            <div class="header item">Apps<i class="cog right aligned icon" onclick="window.location.href='http://localhost:3000/admin/controlpanel.html'" onmouseover="" style="cursor:pointer;"></i></div>
+            <a class="item">
+                <i class="stop red icon" style="float: none;margin: 0em 0.35714286em 0em 0em;"></i> vscode - <span class="ui grey text">%s</span>
+            </a>
+            <a class="item active">
+                <i class="play green icon" style="float: none;margin: 0em 0.35714286em 0em 0em;"></i> vscode2
+            </a>
+        </div>
+    </div>
+<script type="text/javascript" src="semantic.bundle.js"></script><script type="text/javascript" src="sidemenu.bundle.js"></script></body>
+
+</html>

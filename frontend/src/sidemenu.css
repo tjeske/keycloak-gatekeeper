@@ -1,0 +1,15 @@
+#menu {
+    position: fixed;
+    right: -16em;
+    top: 50%;
+    width: 18em;
+    margin: 0 0 0 0;
+    transform: translate(0, -50%);
+    z-index: 5;
+    text-align: left;
+    transition: 0.2s;
+}
+
+#menu:hover {
+    right: -3em
+}
