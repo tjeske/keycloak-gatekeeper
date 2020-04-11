@@ -60,7 +60,7 @@ func main() {
 		}
 	}
 
-	apps := storage.Provider.ReturnAllApps()
+	apps := storage.Provider.GetAllTemplates()
 	for _, app := range apps {
 		log.Println(app.Name)
 	}

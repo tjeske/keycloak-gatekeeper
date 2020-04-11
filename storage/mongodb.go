@@ -50,14 +50,6 @@ func NewMongoDbProvider(host, user, password, database string) StorageProvider {
 	return &mongoDbProvider{client: client, collection: collection}
 }
 
-func (p *mongoDbProvider) GetAppConfigByName(name string) *App {
-	var app App
-	filter := bson.M{"Name": app.Name}
-	documentReturned := p.collection.FindOne(context.TODO(), filter)
-	documentReturned.Decode(&app)
-	return &app
-}
-
 func (p *mongoDbProvider) UpdateApp(app App) {
 	filter := bson.M{"Name": app.Name}
 	options := options.Replace()
@@ -69,7 +61,7 @@ func (p *mongoDbProvider) UpdateApp(app App) {
 	log.Debugf("Update configuration for app '%s': %+v -> %+v", app.Name, app, documentReturned)
 }
 
-func (p *mongoDbProvider) ReturnAllApps() []*App {
+func (p *mongoDbProvider) GetAllTemplates() []*App {
 	var apps []*App
 	filter := bson.M{}
 	cur, err := p.collection.Find(context.TODO(), filter)
@@ -83,6 +75,14 @@ func (p *mongoDbProvider) ReturnAllApps() []*App {
 		apps = append(apps, &app)
 	}
 	return apps
+}
+
+func (p *mongoDbProvider) GetTemplateByName(name string) *App {
+	var app App
+	filter := bson.M{"Name": app.Name}
+	documentReturned := p.collection.FindOne(context.TODO(), filter)
+	documentReturned.Decode(&app)
+	return &app
 }
 
 func (p *mongoDbProvider) GetAppConfigByEntryPoint(entryPoint string) *App {

@@ -4,10 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Nerzal/gocloak/v4"
@@ -21,6 +21,7 @@ import (
 
 type udeskOauthProxy struct {
 	*oauthProxy
+	dockerClient *backend.DockerClient
 }
 
 // für /searchUser
@@ -33,6 +34,13 @@ type Profile struct {
 	Description string `json:"description"`
 }
 
+var mutex = &sync.Mutex{}
+
+func newUdeskProxy() *udeskOauthProxy {
+	dc := backend.NewDockerClientWithWriter("1.2.3", rb)
+	proxy := &udeskOauthProxy{dockerClient: dc}
+	return proxy
+}
 func (r *udeskOauthProxy) createReverseProxy() error {
 
 	// TODO: find better solution
@@ -50,7 +58,7 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 		fs.ServeHTTP(w, r)
 	}))
 
-	engine.With(r.authenticationMiddleware()).Get("/getTemplates", r.getTemplates)
+	engine.Get("/getTemplates", r.getTemplates)
 
 	engine.With(r.authenticationMiddleware(),
 		r.identityHeadersMiddleware(r.config.AddClaims)).Get("/startApp", r.startApp)
@@ -71,7 +79,7 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 }
 
 func (r *udeskOauthProxy) getTemplates(w http.ResponseWriter, req *http.Request) {
-	apps := storageProvider.ReturnAllApps()
+	apps := storageProvider.GetAllTemplates()
 	js, err := json.Marshal(struct {
 		Data []*storge.App `json:"data"`
 	}{apps})
@@ -86,65 +94,65 @@ func (r *udeskOauthProxy) getTemplates(w http.ResponseWriter, req *http.Request)
 
 func (r *udeskOauthProxy) startApp(w http.ResponseWriter, req *http.Request) {
 
-	for k, v := range req.URL.Query() {
-		fmt.Printf("%s: %s\n", k, v)
+	templateName := req.URL.Query().Get("templateName")
+	if templateName == "" {
+		http.Error(w, "cannot find template name in request", http.StatusInternalServerError)
+		return
 	}
 
-	apps := storageProvider.ReturnAllApps()
-	js, err := json.Marshal(struct {
-		Data []*storge.App `json:"data"`
-	}{apps})
+	app := storageProvider.GetTemplateByName(templateName)
+	if app == nil {
+		http.Error(w, "cannot find template", http.StatusInternalServerError)
+		return
+	}
+
+	// get free internal port
+	mutex.Lock()
+	port, err := freeport.GetFreePort()
+	mutex.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	templateName := req.URL.Query().Get("templateName")
-	container := storageProvider.GetAppConfigByName(templateName)
-	if container == nil {
-		// cannot find container
-		w.WriteHeader(http.StatusInternalServerError)
+	// get identity
+	user, err := r.getIdentity(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	port, err := freeport.GetFreePort()
-	if err != nil {
-		log.Fatal(err)
-	}
 	args := make(map[string]string)
-
-	user, err := r.getIdentity(req)
-	if err != nil {
-		fmt.Println(req)
+	for k, v := range req.URL.Query() {
+		if k == "user" {
+			args[k] = user.name
+		} else if k == "templateName" {
+			// skip
+		} else {
+			args[k] = strings.Join(v, " ")
+		}
 	}
-	args["user"] = user.name
+
 	uuid := uuid.New().String()
 	name := req.URL.Query().Get("name")
 	dockerRunArgs := []string{
 		"-d",
-		"-p", strconv.Itoa(port) + ":" + strconv.Itoa(container.InternalPort),
+		"-p", strconv.Itoa(port) + ":" + strconv.Itoa(app.InternalPort),
 		"--label", "udesk_uuid=" + uuid,
 		"--label", "udesk_entry_port=" + strconv.Itoa(port),
 		"--label", "udesk_owner=" + user.name,
 		"--label", "udesk_name=" + name,
 	}
 
-	// rb.Input <- "blah"
-	// rb.Flush() // if needed-- useful for testing
+	go r.dockerClient.Run(app.Name, user.name, args, app, dockerRunArgs, []string{})
 
-	var dc = backend.NewDockerClientWithWriter("1.2.3", rb)
-	go dc.Run(container.Name, user.name, args, container, dockerRunArgs, []string{})
-
-	runtimeCache[userContainer{user: user.name, container: container}] = port
-	time.Sleep(1 * time.Second)
-	r.dropCookie(w, req.Host, "udesk_current_app", uuid, 0)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	w.Write([]byte("{}"))
 }
 
 func (r *udeskOauthProxy) removeApp(w http.ResponseWriter, req *http.Request) {
 	containerID := chi.URLParam(req, "query")
-	err := dockerClient.RemoveContainer(containerID)
+	err := r.dockerClient.RemoveContainer(containerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -152,7 +160,7 @@ func (r *udeskOauthProxy) removeApp(w http.ResponseWriter, req *http.Request) {
 
 func (r *udeskOauthProxy) pauseApp(w http.ResponseWriter, req *http.Request) {
 	containerID := chi.URLParam(req, "query")
-	err := dockerClient.PauseContainer(containerID)
+	err := r.dockerClient.PauseContainer(containerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -160,7 +168,7 @@ func (r *udeskOauthProxy) pauseApp(w http.ResponseWriter, req *http.Request) {
 
 func (r *udeskOauthProxy) unpauseApp(w http.ResponseWriter, req *http.Request) {
 	containerID := chi.URLParam(req, "query")
-	err := dockerClient.UnpauseContainer(containerID)
+	err := r.dockerClient.UnpauseContainer(containerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -176,7 +184,7 @@ func (r *udeskOauthProxy) switchApp(w http.ResponseWriter, req *http.Request) {
 
 func (r *udeskOauthProxy) dockerStatus(w http.ResponseWriter, req *http.Request) {
 
-	containers := dockerClient.GetStatus()
+	containers := r.dockerClient.GetStatus()
 	y := [][]string{}
 	for _, container := range containers {
 

@@ -67,7 +67,7 @@ func NewOauthProxyApp() *cli.App {
 		}
 
 		// step: create the proxy
-		var udeskProxy = &udeskOauthProxy{}
+		var udeskProxy = newUdeskProxy()
 		proxy, err := newProxy(config)
 		if err != nil {
 			return printError(err.Error())

@@ -66,12 +66,17 @@ function showStartNewAppModal(templateName: string, params: Map<string, string>,
                     });
                     table.ajax.reload();
                 },
-                error: function (result) {
-                    console.log("HGJGHGHJG");
+                error: function (result: { responseText: string }) {
+                    let msg = ""
+                    if (result != null) {
+                        msg = `Cannot create new application (error: ${result.responseText})!`
+                    } else {
+                        msg = `Cannot create new application!`
+                    }
                     
                     ($('body') as any).toast({
                         class: 'error',
-                        message: `Cannot start new application!`
+                        message: msg
                     });
                 }
             });
@@ -97,6 +102,8 @@ function initStartNewAppButton(table: DataTables.Api) {
                 }
             },
             error: function (result) {
+                console.log(result);
+                
                 ($('body') as any).toast({
                     class: 'error',
                     message: `Cannot get template list from server`

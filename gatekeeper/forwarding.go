@@ -54,14 +54,23 @@ func setConfigProvider(newConfigProvider config.ConfigProvider) {
 	configProvider = newConfigProvider
 }
 
-var runtimeCache = make(map[userContainer]int)
-
 var dockerClient = backend.NewDockerClient("1.2.3")
 
 // proxyMiddleware is responsible for handles reverse proxy request to the upstream endpoint
 func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		next.ServeHTTP(w, req)
+
+		// TODO: nur forwarden wenn kein udesk Zugriff (kein localhost/udesk/...)
+		var uuid = ""
+		for _, cookie := range req.Cookies() {
+			if cookie.Name == "udesk_current_app" {
+				uuid = cookie.Value
+			}
+		}
+		if uuid == "" {
+			return
+		}
 
 		// @step: retrieve the request scope
 		scope := req.Context().Value(contextScopeName)
@@ -107,14 +116,6 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 		// }
 		// fmt.Println("!!!!!!" + appName)
 		// fmt.Println("!!!!!!" + req.URL.Path)
-		fmt.Println(req.Cookies())
-		var uuid = ""
-		for _, cookie := range req.Cookies() {
-			if cookie.Name == "udesk_current_app" {
-				uuid = cookie.Value
-				fmt.Println(cookie)
-			}
-		}
 
 		// container := storageProvider.GetAppConfigByEntryPoint(req.Host)
 		// if container == nil {

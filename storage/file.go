@@ -29,10 +29,6 @@ type fileProvider struct {
 	apps       []*App
 }
 
-// type yamlSpec struct {
-// 	apps []*App
-// }
-
 var mu sync.Mutex
 
 func NewFileProvider(configFile string) StorageProvider {
@@ -79,17 +75,6 @@ func (p *fileProvider) saveConfigFile() {
 	util.CheckErr(err)
 }
 
-func (p *fileProvider) GetAppConfigByName(name string) *App {
-	mu.Lock()
-	defer mu.Unlock()
-	for _, app := range p.apps {
-		if app.Name == name {
-			return app
-		}
-	}
-	return nil
-}
-
 func (p *fileProvider) UpdateApp(app App) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -109,11 +94,23 @@ func (p *fileProvider) UpdateApp(app App) {
 	log.Debugf("Update configuration for app '%s': %+v", app.Name, app)
 }
 
-func (p *fileProvider) ReturnAllApps() []*App {
+func (p *fileProvider) GetAllTemplates() []*App {
 	mu.Lock()
 	defer mu.Unlock()
 
 	return p.apps
+}
+
+func (p *fileProvider) GetTemplateByName(name string) *App {
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, app := range p.apps {
+		if app.Name == name {
+			return app
+		}
+	}
+	return nil
 }
 
 func (p *fileProvider) GetAppConfigByEntryPoint(entryPoint string) *App {
