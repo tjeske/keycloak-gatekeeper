@@ -84,11 +84,3 @@ func (p *mongoDbProvider) GetTemplateByName(name string) *App {
 	documentReturned.Decode(&app)
 	return &app
 }
-
-func (p *mongoDbProvider) GetAppConfigByEntryPoint(entryPoint string) *App {
-	var app App
-	filter := bson.M{"EntryPoint": entryPoint}
-	documentReturned := p.collection.FindOne(context.TODO(), filter)
-	documentReturned.Decode(&app)
-	return &app
-}

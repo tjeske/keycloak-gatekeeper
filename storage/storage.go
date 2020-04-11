@@ -25,7 +25,6 @@ var logFatalf = log.Fatalf
 var filesystem = afero.NewOsFs()
 
 type StorageProvider interface {
-	GetAppConfigByEntryPoint(name string) *App
 	UpdateApp(app App)
 	GetAllTemplates() []*App
 	GetTemplateByName(name string) *App

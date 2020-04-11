@@ -112,14 +112,3 @@ func (p *fileProvider) GetTemplateByName(name string) *App {
 	}
 	return nil
 }
-
-func (p *fileProvider) GetAppConfigByEntryPoint(entryPoint string) *App {
-	mu.Lock()
-	defer mu.Unlock()
-	for _, app := range p.apps {
-		if app.EntryPoint == entryPoint {
-			return app
-		}
-	}
-	return nil
-}

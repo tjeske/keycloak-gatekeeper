@@ -108,16 +108,6 @@ func getConfig(yamlConfigReader io.Reader) yamlSpec {
 	return config
 }
 
-// func (cfg *AppInfo) GetContainer(entryPoint string) (*App, error) {
-// 	containers := cfg.AppConfig.Containers
-// 	for i := range containers {
-// 		if containers[i].EntryPoint == entryPoint {
-// 			return &containers[i], nil
-// 		}
-// 	}
-// 	return nil, errors.New("Container not found")
-// }
-
 func (m *MongoDb) GetMongoDbHost() string {
 	if m.Host != "" {
 		return m.Host

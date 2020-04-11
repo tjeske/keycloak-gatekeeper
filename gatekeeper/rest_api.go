@@ -202,10 +202,10 @@ func (r *udeskOauthProxy) dockerStatus(w http.ResponseWriter, req *http.Request)
 			owner = ownerLabel
 		}
 
-		// entrypoint
+		// uuid
 		uuid := "UNKNOWN"
-		if entryPointLabel, ok := container.Labels["udesk_uuid"]; ok {
-			uuid = entryPointLabel
+		if uuidLabel, ok := container.Labels["udesk_uuid"]; ok {
+			uuid = uuidLabel
 		}
 
 		y = append(y, []string{

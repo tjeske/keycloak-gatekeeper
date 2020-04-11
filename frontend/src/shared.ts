@@ -23,7 +23,6 @@ export interface App {
     dockerfile: string
     files: Map<string, string>
     access: { [key: string]: Access; }
-    entryPoint: string
     internalPort: string
 }
 
@@ -62,9 +61,6 @@ function loadApp(name: string) {
     let element = config.find(it => 'name' in it && it.name == name)
     if (element != undefined) {
         addApp(element.name)
-        if ('entryPoint' in element) {
-            addEntryPoint(element.entryPoint)
-        }
         if ('internalPort' in element) {
             addInternalPort(element.internalPort)
         }
@@ -108,10 +104,6 @@ export function addApp(appName: string) {
     //     selected: true
     // });
     // $('.ui.dropdown').dropdown('change values', apps)
-}
-
-function addEntryPoint(entryPoint: string) {
-    $('#entryPoint').val(entryPoint)
 }
 
 function addInternalPort(internalPort: string) {

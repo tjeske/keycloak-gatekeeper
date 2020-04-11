@@ -26,7 +26,6 @@ type App struct {
 	Files        map[string]string `json:"files"`
 	Access       map[string]access `json:"access"`
 	InternalPort int               `json:"internalPort"`
-	EntryPoint   string            `json:"entryPoint"`
 }
 
 type access struct {
