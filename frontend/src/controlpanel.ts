@@ -155,7 +155,7 @@ function initAppStatusView(): DataTables.Api {
         "searching": false
     });
     // button unpause
-    $('#status-table').on('click', '.app-unpause-btn', function (e) {
+    $('#app-status-table').on('click', '.app-unpause-btn', function (e) {
         let target = $(e.target)
         let containerId = target.data("container-id")
         let containerName = target.data("container-name")
@@ -179,12 +179,14 @@ function initAppStatusView(): DataTables.Api {
         });
     });
     // button remove
-    $('#status-table').on('click', '.app-remove-btn', function (e) {
+    $('#app-status-table').on('click', '.app-remove-btn', function (e) {
+        console.log("KHJGJG");
+        
         let target = $(e.target)
         showRemoveContainerModal(target.data("container-name"), target.data("container-id"), table)
     });
     // button pause
-    $('#status-table').on('click', '.app-pause-btn', function (e) {
+    $('#app-status-table').on('click', '.app-pause-btn', function (e) {
         let target = $(e.target)
         let containerId = target.data("container-id")
         let containerName = target.data("container-name")

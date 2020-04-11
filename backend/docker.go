@@ -17,6 +17,7 @@ package backend
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -213,32 +214,44 @@ func (dc *DockerClient) GetStatus() []types.Container {
 	return containers
 }
 
-func (dc *DockerClient) GetContainer(uuid string) *types.Container {
+func (dc *DockerClient) GetContainer(uuid string) (*types.Container, error) {
 	opts := types.ContainerListOptions{All: true,
 		Filters: filters.NewArgs(filters.Arg("label", "udesk_uuid="+uuid)),
 	}
 	container, err := dc.dockerCli.Client().ContainerList(context.Background(), opts)
-	util.CheckErr(err)
-	// spew.Dump(containers)
-	if len(container) > 0 {
-		return &container[0]
-	} else {
-		return nil
+	if err != nil {
+		return nil, err
 	}
+	if len(container) > 0 {
+		return &container[0], nil
+	}
+	return nil, errors.New("found more than one container")
 }
 
-func (dc *DockerClient) RemoveContainer(containerId string) error {
-	err := dc.dockerCli.Client().ContainerRemove(context.Background(), containerId, types.ContainerRemoveOptions{Force: true})
+func (dc *DockerClient) RemoveContainer(uuid string) error {
+	container, err := dc.GetContainer(uuid)
+	if err != nil {
+		return err
+	}
+	err = dc.dockerCli.Client().ContainerRemove(context.Background(), container.ID, types.ContainerRemoveOptions{Force: true})
 	return err
 }
 
-func (dc *DockerClient) PauseContainer(containerId string) error {
-	err := dc.dockerCli.Client().ContainerPause(context.Background(), containerId)
+func (dc *DockerClient) PauseContainer(uuid string) error {
+	container, err := dc.GetContainer(uuid)
+	if err != nil {
+		return err
+	}
+	err = dc.dockerCli.Client().ContainerPause(context.Background(), container.ID)
 	return err
 }
 
-func (dc *DockerClient) UnpauseContainer(containerId string) error {
-	err := dc.dockerCli.Client().ContainerUnpause(context.Background(), containerId)
+func (dc *DockerClient) UnpauseContainer(uuid string) error {
+	container, err := dc.GetContainer(uuid)
+	if err != nil {
+		return err
+	}
+	err = dc.dockerCli.Client().ContainerUnpause(context.Background(), container.ID)
 	return err
 }
 

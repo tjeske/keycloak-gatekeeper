@@ -64,19 +64,27 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 		if strings.HasPrefix(req.URL.Path, "/udesk") {
 			return
 		}
-		// TODO: nur forwarden wenn kein udesk Zugriff (kein localhost/udesk/...)
+
 		var uuid = ""
 		for _, cookie := range req.Cookies() {
 			if cookie.Name == "udesk_current_app" {
 				uuid = cookie.Value
 			}
 		}
-
-		_, err := r.getIdentity(req)
-
-		c := dockerClient.GetContainer(uuid)
-		if uuid == "" || c == nil {
+		container, err := dockerClient.GetContainer(uuid)
+		if uuid == "" || container == nil || err != nil {
 			http.Redirect(w, req, "http://"+req.Host+"/udesk/admin/controlpanel.html", http.StatusSeeOther)
+			return
+		}
+
+		user, err := r.getIdentity(req)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		owner := container.Labels["udesk_owner"]
+		if user.name != owner {
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
@@ -103,65 +111,7 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 			req.Header.Set(k, v)
 		}
 
-		// *****************
-
-		// appName := "unknown"
-		// rawParts := strings.Split(req.URL.Path, "/")
-		// var parts []string
-		// for _, part := range rawParts {
-		// 	if part != "" {
-		// 		parts = append(parts, part)
-		// 	}
-		// }
-		// if len(parts) > 0 {
-		// 	appName = parts[0]
-		// 	// req.URL.Path = strings.Join(parts[1:], "/")
-		// }
-		// fmt.Println("!!!!!!" + appName)
-		// fmt.Println("!!!!!!" + req.URL.Path)
-
-		// container := storageProvider.GetAppConfigByEntryPoint(req.Host)
-		// if container == nil {
-		// 	// cannot find container
-		// 	w.WriteHeader(http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// _, ok := container.Access[user.name]
-		// if !ok {
-		// 	r.log.Warn("unauthorized access from " + user.name)
-		// 	w.WriteHeader(http.StatusUnauthorized)
-		// 	return
-		// }
-
-		// port, ok := runtimeCache[userContainer{user: user.name, container: container}]
-		// fmt.Println(runtimeCache)
-		// if !ok {
-		// 	port, err = freeport.GetFreePort()
-		// 	if err != nil {
-		// 		log.Fatal(err)
-		// 	}
-		// 	y := container.Access[user.name]
-		// 	args := y.Args
-		// 	if args == nil {
-		// 		args = make(map[string]string)
-		// 	}
-		// 	args["user"] = user.name
-		// 	dockerRunArgs := []string{
-		// 		"-d",
-		// 		"-p", strconv.Itoa(port) + ":" + strconv.Itoa(container.InternalPort),
-		// 		"--label", "bcb_entrypoint=" + container.EntryPoint,
-		// 	}
-		// 	dockerClient.Run(container.Name, user.name, args, container, dockerRunArgs, []string{})
-		// 	runtimeCache[userContainer{user: user.name, container: container}] = port
-		// 	time.Sleep(1 * time.Second)
-		// 	r.dropCookie(w, req.Host, "test", "testvalue", 0)
-		// }
-
-		// find container with label abc
-		// read port label
-
-		endpoint, err := url.Parse("http://localhost:" + c.Labels["udesk_entry_port"])
+		endpoint, err := url.Parse("http://localhost:" + container.Labels["udesk_entry_port"])
 
 		// @note: by default goproxy only provides a forwarding proxy, thus all requests have to be absolute and we must update the host headers
 		req.URL.Host = endpoint.Host

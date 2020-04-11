@@ -151,8 +151,8 @@ func (r *udeskOauthProxy) startApp(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *udeskOauthProxy) removeApp(w http.ResponseWriter, req *http.Request) {
-	containerID := chi.URLParam(req, "query")
-	err := r.dockerClient.RemoveContainer(containerID)
+	uuid := chi.URLParam(req, "query")
+	err := r.dockerClient.RemoveContainer(uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

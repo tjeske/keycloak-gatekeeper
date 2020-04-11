@@ -216,7 +216,7 @@ export function addAccess(userName: string, isReadable: boolean, isControlable: 
         debug: true,
         apiSettings: {
             action: 'search',
-            url: '/searchUser/{query}'
+            url: '/udesk/searchUser/{query}'
         },
     });
     paramRow.fadeIn("slow");
