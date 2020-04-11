@@ -16,9 +16,9 @@ limitations under the License.
 package gatekeeper
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/tjeske/keycloak-gatekeeper/backend"
@@ -61,6 +61,9 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		next.ServeHTTP(w, req)
 
+		if strings.HasPrefix(req.URL.Path, "/udesk") {
+			return
+		}
 		// TODO: nur forwarden wenn kein udesk Zugriff (kein localhost/udesk/...)
 		var uuid = ""
 		for _, cookie := range req.Cookies() {
@@ -68,7 +71,12 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 				uuid = cookie.Value
 			}
 		}
-		if uuid == "" {
+
+		_, err := r.getIdentity(req)
+
+		c := dockerClient.GetContainer(uuid)
+		if uuid == "" || c == nil {
+			http.Redirect(w, req, "http://"+req.Host+"/udesk/admin/controlpanel.html", http.StatusSeeOther)
 			return
 		}
 
@@ -93,11 +101,6 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 		// @step: add any custom headers to the request
 		for k, v := range r.config.Headers {
 			req.Header.Set(k, v)
-		}
-
-		user, err := r.getIdentity(req)
-		if err != nil {
-			fmt.Println(user)
 		}
 
 		// *****************
@@ -158,11 +161,6 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 		// find container with label abc
 		// read port label
 
-		c := dockerClient.GetContainer(uuid)
-		if uuid == "" || c == nil {
-			http.Redirect(w, req, "http://"+req.Host+"/admin/controlpanel.html", http.StatusSeeOther)
-			return
-		}
 		endpoint, err := url.Parse("http://localhost:" + c.Labels["udesk_entry_port"])
 
 		// @note: by default goproxy only provides a forwarding proxy, thus all requests have to be absolute and we must update the host headers

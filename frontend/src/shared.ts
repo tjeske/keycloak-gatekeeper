@@ -35,7 +35,7 @@ let config: App[] = []
 export function initTemplateDropDown() {
     // get templates
     $.ajax({
-        url: "/getTemplates",
+        url: "/udesk/getTemplates",
         success: function (result: {data : App[]}) {
             config = result.data
             let values = result.data.map(it => {
@@ -241,7 +241,7 @@ export function showRemoveContainerModal(containerName: string, containerId: str
     $(modal).modal({
         onApprove: function (e) {
             $.ajax({
-                url: "/removeApp/" + containerId,
+                url: "/udesk/removeApp/" + containerId,
                 success: function (result) {
                     ($('body') as any).toast({
                         class: 'success',

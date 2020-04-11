@@ -49,31 +49,31 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 		panic("cannot cast to *chi.Mux")
 	}
 
-	engine.With(proxyDenyMiddleware).Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/admin/", 301)
+	engine.With(proxyDenyMiddleware).Get("/udesk/admin", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/udesk/admin/", 301)
 	})
 
-	fs := http.StripPrefix("/admin", http.FileServer(http.Dir("frontend/dist")))
-	engine.With(r.authenticationMiddleware(), proxyDenyMiddleware).Get("/admin/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	fs := http.StripPrefix("/udesk/admin", http.FileServer(http.Dir("frontend/dist")))
+	engine.With(r.authenticationMiddleware(), proxyDenyMiddleware).Get("/udesk/admin/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fs.ServeHTTP(w, r)
 	}))
 
-	engine.Get("/getTemplates", r.getTemplates)
+	engine.Get("/udesk/getTemplates", r.getTemplates)
 
 	engine.With(r.authenticationMiddleware(),
-		r.identityHeadersMiddleware(r.config.AddClaims)).Get("/startApp", r.startApp)
+		r.identityHeadersMiddleware(r.config.AddClaims)).Get("/udesk/startApp", r.startApp)
 
-	engine.With(r.authenticationMiddleware()).Get("/removeApp/{query}", r.removeApp)
+	engine.With(r.authenticationMiddleware()).Get("/udesk/removeApp/{query}", r.removeApp)
 
-	engine.With(r.authenticationMiddleware()).Get("/pauseApp/{query}", r.pauseApp)
+	engine.With(r.authenticationMiddleware()).Get("/udesk/pauseApp/{query}", r.pauseApp)
 
-	engine.With(r.authenticationMiddleware()).Get("/unpauseApp/{query}", r.unpauseApp)
+	engine.With(r.authenticationMiddleware()).Get("/udesk/unpauseApp/{query}", r.unpauseApp)
 
-	engine.With(r.authenticationMiddleware()).Get("/switchApp/{query}", r.switchApp)
+	engine.With(r.authenticationMiddleware()).Get("/udesk/switchApp/{query}", r.switchApp)
 
-	engine.With(r.authenticationMiddleware()).Get("/dockerStatus", r.dockerStatus)
+	engine.With(r.authenticationMiddleware()).Get("/udesk/dockerStatus", r.dockerStatus)
 
-	engine.With(r.authenticationMiddleware()).Get("/searchUser/{query}", r.searchUser)
+	engine.With(r.authenticationMiddleware()).Get("/udesk/searchUser/{query}", r.searchUser)
 
 	return nil
 }

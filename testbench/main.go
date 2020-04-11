@@ -31,10 +31,10 @@ func main() {
 	r := chi.NewRouter()
 
 	r.Route("/", func(e chi.Router) {
-		e.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		e.Get("/udesk/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("hi"))
 		})
-		e.Get("/searchUser/{query}", func(w http.ResponseWriter, r *http.Request) {
+		e.Get("/udesk/searchUser/{query}", func(w http.ResponseWriter, r *http.Request) {
 
 			users, err := client.GetUsers(
 				token.AccessToken,

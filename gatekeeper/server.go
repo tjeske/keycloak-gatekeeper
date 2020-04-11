@@ -217,7 +217,7 @@ func (r *oauthProxy) createReverseProxy() error {
 		},
 	} // use default options
 
-	engine.With(proxyDenyMiddleware).Get("/echo", func(w http.ResponseWriter, req *http.Request) {
+	engine.With(proxyDenyMiddleware).Get("/udesk/echo", func(w http.ResponseWriter, req *http.Request) {
 		c, err := upgrader.Upgrade(w, req, nil)
 		if err != nil {
 			log.Print("upgrade:", err)
@@ -576,8 +576,8 @@ func (r *oauthProxy) createUpstreamProxy(upstream *url.URL) (*goproxy.ProxyHttpS
 	fmt.Println(body)
 
 	reHead := regexp.MustCompile(`((href|src)=")(.+?\.(css|js)")`)
-	replHead := reHead.ReplaceAllString(head, "$1/admin/$3")
-	replBody := reHead.ReplaceAllString(body, "$1/admin/$3")
+	replHead := reHead.ReplaceAllString(head, "$1/udesk/admin/$3")
+	replBody := reHead.ReplaceAllString(body, "$1/udesk/admin/$3")
 
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.OnResponse().DoFunc(func(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
@@ -645,14 +645,14 @@ func (r *oauthProxy) createUpstreamProxy(upstream *url.URL) (*goproxy.ProxyHttpS
 						var genElements []string
 						for _, appName := range appNames {
 							genElements = append(genElements, fmt.Sprintf(
-								`<a href="http://localhost:3000/switchApp/%s" class="item">
+								`<a href="http://localhost:3000/udesk/switchApp/%s" class="item">
 								<i class="play green icon" style="float: none;margin: 0em 0.35714286em 0em 0em;"></i> %s - <span class="ui grey text">%s</span>
 								</a>`, appName.Uuid, appName.Name, "foo"))
 						}
 						w.Write([]byte(fmt.Sprintf(`
 						<div id="menu">
 							<div class="ui vertical menu" style="border-width: 2px;border-left-width: 10px;border-right-width: 0px;border-top-right-radius: 0;border-bottom-right-radius: 0">
-								<div class="header item">Apps<i class="cog right aligned icon" onclick="window.location.href='http://localhost:3000/admin/controlpanel.html'" onmouseover="" style="cursor:pointer;"></i></div>
+								<div class="header item">Apps<i class="cog right aligned icon" onclick="window.location.href='http://localhost:3000/udesk/admin/controlpanel.html'" onmouseover="" style="cursor:pointer;"></i></div>
 								%s
 							</div>
 						</div>`+replBody, strings.Join(genElements, ""))))

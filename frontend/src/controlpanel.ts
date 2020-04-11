@@ -56,7 +56,7 @@ function showStartNewAppModal(templateName: string, params: Map<string, string>,
     $(modal).modal({
         onApprove: function (e) {
             $.ajax({
-                url: "/startApp",
+                url: "/udesk/startApp",
                 type: "GET",
                 data: $('form.tagForm').serialize(),
                 success: function (result) {
@@ -90,7 +90,7 @@ function initStartNewAppButton(table: DataTables.Api) {
 
         let templateName = $('#app-dropdown').dropdown('get value');
         $.ajax({
-            url: "/getTemplates",
+            url: "/udesk/getTemplates",
             success: function (result: { data: App[] }) {
                 let config = result.data
                 let element = config.find(it => 'name' in it && it.name == templateName)
@@ -120,14 +120,14 @@ function initAppStatusView(): DataTables.Api {
     // init table
     let table = $('#app-status-table').DataTable({
         "ajax": {
-            "url": '/dockerStatus'
+            "url": '/udesk/dockerStatus'
         },
         "columnDefs": [
             {
                 // name
                 "render": function (name: string, type: string, row: string[]) {
                     let uuid = row[4]
-                    return `<a href="/switchApp/${uuid}">${name}</a><span style="float:right;"><i class="red icon delete app-remove-btn" data-container-name="${name}" data-container-id="${uuid}"></i></span>`
+                    return `<a href="/udesk/switchApp/${uuid}">${name}</a><span style="float:right;"><i class="red icon delete app-remove-btn" data-container-name="${name}" data-container-id="${uuid}"></i></span>`
                 },
                 "targets": 0
             },
@@ -160,7 +160,7 @@ function initAppStatusView(): DataTables.Api {
         let containerId = target.data("container-id")
         let containerName = target.data("container-name")
         $.ajax({
-            url: "/unpauseApp/" + containerId,
+            url: "/udesk/unpauseApp/" + containerId,
             success: function (result) {
                 ($('body') as any).toast({
                     class: 'success',
@@ -189,7 +189,7 @@ function initAppStatusView(): DataTables.Api {
         let containerId = target.data("container-id")
         let containerName = target.data("container-name")
         $.ajax({
-            url: "/pauseApp/" + containerId,
+            url: "/udesk/pauseApp/" + containerId,
             success: function (result) {
                 ($('body') as any).toast({
                     class: 'success',
@@ -233,7 +233,7 @@ $(document).ready(function () {
     // rendererType: "canvas" // canvas 或者 dom
     
     });
-    const socket = new WebSocket('ws://localhost:3000/echo')
+    const socket = new WebSocket('ws://localhost:3000/udesk/echo')
     const attachAddon = new AttachAddon(socket)
     const fitAddon = new FitAddon()
 

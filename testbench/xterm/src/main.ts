@@ -13,7 +13,7 @@ const terminal = new Terminal({
     },
 
 });
-const socket = new WebSocket('ws://localhost:3000/echo');
+const socket = new WebSocket('ws://localhost:3000/udesk/echo');
 const attachAddon = new AttachAddon(socket);
 
 // Attach the socket to term
