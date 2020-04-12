@@ -180,8 +180,6 @@ function initAppStatusView(): DataTables.Api {
     });
     // button remove
     $('#app-status-table').on('click', '.app-remove-btn', function (e) {
-        console.log("KHJGJG");
-        
         let target = $(e.target)
         showRemoveContainerModal(target.data("container-name"), target.data("container-id"), table)
     });
