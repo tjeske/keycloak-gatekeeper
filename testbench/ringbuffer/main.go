@@ -22,7 +22,7 @@ var upgrader = websocket.Upgrader{
 	},
 } // use default options
 
-var rb = NewRingBuffer(100)
+var al = NewAppLogger(100)
 
 func echo(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -32,7 +32,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 	for {
-		data := <-rb.Output
+		data := <-al.GetLoggerStream("test", "test")
 		err := c.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
 		if err != nil {
 			log.Println("write:", err)
@@ -44,7 +44,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 func main() {
 	go func() {
 		for {
-			rb.Write([]byte("ABC"))
+			al.Write([]byte("ABC"))
 			time.Sleep(1 * time.Second)
 		}
 	}()

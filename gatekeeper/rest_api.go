@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/phayes/freeport"
 	"github.com/tjeske/keycloak-gatekeeper/backend"
 	storge "github.com/tjeske/keycloak-gatekeeper/storage"
@@ -37,7 +39,7 @@ type Profile struct {
 var mutex = &sync.Mutex{}
 
 func newUdeskProxy() *udeskOauthProxy {
-	dc := backend.NewDockerClientWithWriter("1.2.3", rb)
+	dc := backend.NewDockerClientWithWriter("1.2.3", appLogger)
 	proxy := &udeskOauthProxy{dockerClient: dc}
 	return proxy
 }
@@ -74,6 +76,8 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 	engine.With(r.authenticationMiddleware()).Get("/udesk/dockerStatus", r.dockerStatus)
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/searchUser/{query}", r.searchUser)
+
+	engine.With(r.authenticationMiddleware()).Get("/udesk/echo", r.appLogging)
 
 	return nil
 }
@@ -272,4 +276,28 @@ func (r *udeskOauthProxy) searchUser(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+} // use default options
+
+func (r *udeskOauthProxy) appLogging(w http.ResponseWriter, req *http.Request) {
+	c, err := upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		log.Print("upgrade:", err)
+		return
+	}
+	defer c.Close()
+	for {
+		user, err := r.getIdentity(req)
+		data := <-appLogger.GetLoggerStream(user.name, user.token.RawHeader)
+		err = c.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
+		if err != nil {
+			log.Println("write:", err)
+			break
+		}
+	}
 }

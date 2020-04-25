@@ -25,7 +25,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime"
 	"net"
 	"net/http"
@@ -49,7 +48,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/docgen"
-	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
 	"github.com/tjeske/containerflight/util"
 	"go.uber.org/zap"
@@ -70,7 +68,7 @@ type oauthProxy struct {
 	upstream  reverseProxy
 }
 
-var rb = NewRingBuffer(100)
+var appLogger = NewAppLogger(100)
 
 func init() {
 	_, _ = time.LoadLocation("UTC")      // ensure all time is in UTC [NOTE(fredbi): no this does just nothing]
@@ -209,29 +207,6 @@ func (r *oauthProxy) createReverseProxy() error {
 		e.With(r.authenticationMiddleware()).Get(logoutURL, r.logoutHandler)
 		e.With(r.authenticationMiddleware()).Get(tokenURL, r.tokenHandler)
 		e.Post(loginURL, r.loginHandler) // /oauth/login
-	})
-
-	var upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
-	} // use default options
-
-	engine.With(proxyDenyMiddleware).Get("/udesk/echo", func(w http.ResponseWriter, req *http.Request) {
-		c, err := upgrader.Upgrade(w, req, nil)
-		if err != nil {
-			log.Print("upgrade:", err)
-			return
-		}
-		defer c.Close()
-		for {
-			data := <-rb.Output
-			err := c.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
-			if err != nil {
-				log.Println("write:", err)
-				break
-			}
-		}
 	})
 
 	if r.config.EnableProfiling {
