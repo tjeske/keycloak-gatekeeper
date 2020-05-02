@@ -9,13 +9,13 @@ import (
 )
 
 type sessionInfo struct {
-	context    string
-	ringBuffer *Ringbuf
-	lastAccess time.Time
+	context         string
+	ringBuffer      *Ringbuf
+	stepsRingBuffer *Ringbuf
+	lastAccess      time.Time
 }
 
 type AppLogger struct {
-	rb          *Ringbuf
 	data        *ring.Ring
 	mux         sync.Mutex
 	userMap     map[string][]sessionInfo
@@ -24,9 +24,7 @@ type AppLogger struct {
 }
 
 func NewAppLogger(size int) (result *AppLogger) {
-	rb := NewRingBuffer(100)
 	return &AppLogger{
-		rb:      rb,
 		data:    ring.New(1000),
 		userMap: make(map[string][]sessionInfo),
 	}
@@ -52,6 +50,11 @@ func (al *AppLogger) Write(p []byte) (n int, err error) {
 	for _, v := range al.userMap {
 		for _, sessionInfo := range v {
 			sessionInfo.ringBuffer.Input <- string(p)
+			if al.maxSteps != 0 {
+				sessionInfo.stepsRingBuffer.Input <- string((al.currentStep / al.maxSteps) * 100)
+			} else {
+				sessionInfo.stepsRingBuffer.Input <- string(1)
+			}
 		}
 	}
 	return len(p), nil
@@ -70,7 +73,7 @@ func (al *AppLogger) GetLoggerStream(user, sessionId string) <-chan interface{} 
 		}
 	}
 	// create new sessionInfo
-	newSessionInfo := sessionInfo{context: sessionId, ringBuffer: NewRingBuffer(100)}
+	newSessionInfo := sessionInfo{context: sessionId, ringBuffer: NewRingBuffer(100), stepsRingBuffer: NewRingBuffer((1))}
 	if _, ok := al.userMap[user]; ok {
 		sessionInfos := al.userMap[user]
 		sessionInfos = append(sessionInfos, newSessionInfo)
@@ -79,10 +82,32 @@ func (al *AppLogger) GetLoggerStream(user, sessionId string) <-chan interface{} 
 		sessionInfos = append(sessionInfos, newSessionInfo)
 		al.userMap[user] = sessionInfos
 	}
-	al.data.Do(func(p interface{}) {
-		if p != nil {
-			newSessionInfo.ringBuffer.Input <- p.(string)
-		}
-	})
+
 	return newSessionInfo.ringBuffer.Output
+}
+
+func (al *AppLogger) GetProvisioningStatus(user, sessionId string) <-chan interface{} {
+	al.mux.Lock()
+	defer al.mux.Unlock()
+	sessionInfos := al.userMap[user]
+	if sessionInfos != nil {
+		for _, sessionInfo := range sessionInfos {
+			if sessionInfo.context == sessionId {
+				// found
+				return sessionInfo.ringBuffer.Output
+			}
+		}
+	}
+	// create new sessionInfo
+	newSessionInfo := sessionInfo{context: sessionId, ringBuffer: NewRingBuffer(100), stepsRingBuffer: NewRingBuffer((1))}
+	if _, ok := al.userMap[user]; ok {
+		sessionInfos := al.userMap[user]
+		sessionInfos = append(sessionInfos, newSessionInfo)
+	} else {
+		sessionInfos := make([]sessionInfo, 0)
+		sessionInfos = append(sessionInfos, newSessionInfo)
+		al.userMap[user] = sessionInfos
+	}
+
+	return newSessionInfo.stepsRingBuffer.Output
 }

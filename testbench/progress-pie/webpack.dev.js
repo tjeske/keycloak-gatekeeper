@@ -8,7 +8,6 @@ module.exports = {
     context: __dirname,
     entry: {
         "main": path.resolve(__dirname, "src", "main.ts"),
-        "xterm": path.resolve(__dirname, "node_modules", "xterm", "lib", "xterm.js")
     },
     output: {
         filename: '[name].bundle.js',
@@ -67,7 +66,7 @@ module.exports = {
         }),
         new HtmlWebpackPlugin({
             filename: 'index.html',
-            chunks: ['main', 'xterm'],
+            chunks: ['main'],
             template: path.resolve(__dirname, 'src', 'index.html')
         }),
         new LiveReloadPlugin({ appendScriptTag: true })

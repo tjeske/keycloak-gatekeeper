@@ -6,9 +6,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -22,8 +24,6 @@ var upgrader = websocket.Upgrader{
 	},
 } // use default options
 
-var al = NewAppLogger(100)
-
 func echo(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -32,22 +32,18 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 	for {
-		data := <-al.GetLoggerStream("test", "test")
-		err := c.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
+		x := rand.Intn(101)
+		err := c.WriteMessage(websocket.TextMessage, []byte(strconv.Itoa(x)))
 		if err != nil {
 			log.Println("write:", err)
 			break
 		}
+		fmt.Println(x)
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func main() {
-	go func() {
-		for {
-			al.Write([]byte("ABC"))
-			time.Sleep(1 * time.Second)
-		}
-	}()
 	http.HandleFunc("/echo", echo)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }

@@ -79,6 +79,8 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/echo", r.appLogging)
 
+	engine.With(r.authenticationMiddleware()).Get("/udesk/steps", r.appProvisioningSteps)
+
 	return nil
 }
 
@@ -295,6 +297,24 @@ func (r *udeskOauthProxy) appLogging(w http.ResponseWriter, req *http.Request) {
 		user, err := r.getIdentity(req)
 		data := <-appLogger.GetLoggerStream(user.name, user.token.RawHeader)
 		err = c.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
+		if err != nil {
+			log.Println("write:", err)
+			break
+		}
+	}
+}
+
+func (r *udeskOauthProxy) appProvisioningSteps(w http.ResponseWriter, req *http.Request) {
+	c, err := upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		log.Print("upgrade:", err)
+		return
+	}
+	defer c.Close()
+	for {
+		user, err := r.getIdentity(req)
+		data := <-appLogger.GetProvisioningStatus(user.name, user.token.RawHeader)
+		err = c.WriteMessage(websocket.TextMessage, []byte(data.(string)))
 		if err != nil {
 			log.Println("write:", err)
 			break

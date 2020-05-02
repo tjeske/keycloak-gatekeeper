@@ -17,5 +17,8 @@
         ]
       },
       "moduleResolution": "node"
-    }
+    },
+    "include": [
+      "./typings-custom/**/*.ts"
+    ]
   }

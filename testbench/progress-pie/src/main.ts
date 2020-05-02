@@ -1,24 +1,46 @@
-import "xterm/css/xterm.css";
-import { Terminal } from 'xterm';
-import { AttachAddon } from 'xterm-addon-attach';
+import * as $ from 'jquery'
+import * as ProgressBar from 'progressbar.js'
 
-const terminal = new Terminal({
-    cursorBlink: false,
-    tabStopWidth: 4,
-    disableStdin: true,
-    fontSize: 13,
-    lineHeight: 1,
-    theme: {
-        background: "#151515",
-    },
+const ws = new WebSocket('ws://localhost:9090/echo');
+ws.onmessage =  function incoming(data) {
+  bar.animate(data.data/100);
+  console.log(data.data);
+}
 
+// progressbar.js@1.0.0 version is used
+// Docs: http://progressbarjs.readthedocs.org/en/1.0.0/
+
+var bar = new ProgressBar.SemiCircle("#container", {
+  strokeWidth: 6,
+  color: '#FFEA82',
+  trailColor: '#eee',
+  trailWidth: 1,
+  svgStyle: null,
+  text: {
+    value: '',
+    alignToBottom: true
+  },
+  from: {color: '#FFEA82'},
+  to: {color: '#ED6A5A'},
+  // Set default step function for all animate calls
+  step: (state, bar) => {
+    bar.path.setAttribute('stroke', state.color);
+    var value = Math.round(bar.value() * 100);
+    if (value === 0) {
+      bar.setText('');
+    } else {
+      bar.setText(value + " %");
+    }
+
+    bar.text.style.color = state.color;
+  }
 });
-const socket = new WebSocket('ws://localhost:9090/echo');
-const attachAddon = new AttachAddon(socket);
+bar.text.style.fontFamily = '"Raleway", Helvetica, sans-serif';
+bar.text.style.fontSize = '2rem';
 
-// Attach the socket to term
-terminal.loadAddon(attachAddon);
+bar.animate(0.3);  // Number from 0.0 to 1.0
 
-terminal.open(document.getElementById('terminal'));
-
-// socket.send("HGFGFGHF")
+let btn = document.getElementById("coolbutton")
+btn.addEventListener("click", (e:Event) => {
+  bar.animate(0.7);
+})

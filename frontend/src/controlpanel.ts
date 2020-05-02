@@ -138,7 +138,7 @@ function initAppStatusView(): DataTables.Api {
                     let containerId = row[4]
                     switch (state) {
                         case "running":
-                            return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
+                            return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i><div id="container"></div>`
                         case "paused":
                             return `${state} <i class="green icon play app-unpause-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
                         default:
