@@ -138,7 +138,7 @@ function initAppStatusView(): DataTables.Api {
                     let containerId = row[4]
                     switch (state) {
                         case "running":
-                            return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i><div id="container"></div>`
+                            return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
                         case "paused":
                             return `${state} <i class="green icon play app-unpause-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
                         default:
@@ -207,7 +207,7 @@ function initAppStatusView(): DataTables.Api {
     });
     // update
     setInterval(function () {
-        table.ajax.reload();
+        table.ajax.reload( null, false );
     }, 1000);
 
     return table
@@ -225,13 +225,12 @@ $(document).ready(function () {
         // disableStdin: true,
         lineHeight: 1,
         // windowsMode: ['Windows', 'Win16', 'Win32', 'WinCE'].indexOf(navigator.platform) >= 0,
-    // convertEol: true,
-    //fontFamily: `'Lato', 'Courier Prime', 'Lato'`,
-    fontFamily: `'Courier Prime'`,
-    fontSize: 11,
-    // fontWeight: 400,
-    // rendererType: "canvas" // canvas 或者 dom
-    
+        // convertEol: true,
+        //fontFamily: `'Lato', 'Courier Prime', 'Lato'`,
+        fontFamily: `'Courier Prime'`,
+        fontSize: 11,
+        // fontWeight: 400,
+        // rendererType: "canvas" // canvas 或者 dom
     });
     const socket = new WebSocket('ws://localhost:3000/udesk/echo')
     const attachAddon = new AttachAddon(socket)
