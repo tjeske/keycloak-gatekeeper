@@ -6,6 +6,9 @@ import { FitAddon } from 'xterm-addon-fit';
 import * as XtermWebfont from 'xterm-webfont'
 require('typeface-courier-prime')
 
+let terminal: Terminal
+let handle: number
+
 function showStartNewAppModal(templateName: string, params: Map<string, string>, table: DataTables.Api) {
 
     let rows = []
@@ -138,7 +141,7 @@ function initAppStatusView(): DataTables.Api {
                     let containerId = row[4]
                     switch (state) {
                         case "running":
-                            return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
+                            return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i><i class="black icon pause app-log-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
                         case "paused":
                             return `${state} <i class="green icon play app-unpause-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
                         default:
@@ -205,8 +208,56 @@ function initAppStatusView(): DataTables.Api {
             }
         });
     });
+    $('#app-status-table').on('click', '.app-log-btn', function (e) {
+        let appName = "TestApp"
+    
+        let modal = `
+        <div class="ui modal" id="app-log-modal">
+            <i class="close icon"></i>
+            <div class="header">
+                Log for application ${appName}
+            </div>
+            <div id="terminal"></div>
+        </div>`
+        $(modal).modal({
+            onShow: function (e) {
+                // clearInterval(handle)
+            },
+            onVisible: function (e) {
+                console.log("run open");
+                terminal = new Terminal({
+                    cursorBlink: false,
+                    tabStopWidth: 4,
+                    lineHeight: 1,
+                    fontSize: 11
+                });
+                const socket = new WebSocket('ws://localhost:9090/echo')
+                const attachAddon = new AttachAddon(socket)
+                const fitAddon = new FitAddon()
+            
+                // Attach the socket to term
+                terminal.loadAddon(attachAddon)
+                terminal.loadAddon(fitAddon)
+                
+                let x = document.getElementById('terminal') as HTMLElement
+                console.log(x);
+                
+                terminal.open(x)
+                fitAddon.fit()
+    
+                terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
+            },
+            onHidden: function (e) {
+                terminal.dispose()
+                $(this).off(e);    // remove this listener
+                $(this).modal('destroy');  // take down the modal object
+                $(this).remove();    // remove the modal element, at last.    
+            }
+        }).modal('show')
+    })
+
     // update
-    setInterval(function () {
+    handle = setInterval(function () {
         table.ajax.reload( null, false );
     }, 1000);
 
@@ -218,29 +269,4 @@ $(document).ready(function () {
     let table = initAppStatusView()
 
     initStartNewAppButton(table)
-
-    const terminal = new Terminal({
-        cursorBlink: false,
-        tabStopWidth: 4,
-        // disableStdin: true,
-        lineHeight: 1,
-        // windowsMode: ['Windows', 'Win16', 'Win32', 'WinCE'].indexOf(navigator.platform) >= 0,
-        // convertEol: true,
-        //fontFamily: `'Lato', 'Courier Prime', 'Lato'`,
-        fontFamily: `'Courier Prime'`,
-        fontSize: 11,
-        // fontWeight: 400,
-        // rendererType: "canvas" // canvas 或者 dom
-    });
-    const socket = new WebSocket('ws://localhost:3000/udesk/echo')
-    const attachAddon = new AttachAddon(socket)
-    const fitAddon = new FitAddon()
-
-    // Attach the socket to term
-    terminal.loadAddon(attachAddon)
-    terminal.loadAddon(fitAddon)
-    terminal.loadAddon(new XtermWebfont())
-    
-    terminal.loadWebfontAndOpen(document.getElementById('terminal') as HTMLElement)
-    fitAddon.fit()
 })

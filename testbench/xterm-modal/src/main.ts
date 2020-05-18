@@ -32,6 +32,7 @@ $('#btn').on('click', null, function (e) {
         <div id="terminal"></div>
     </div>`
     $(modal).modal({
+        allowMultiple: false,
         onVisible: function (e) {
             console.log("run open");
             terminal = new Terminal({
@@ -56,6 +57,9 @@ $('#btn').on('click', null, function (e) {
         onHidden: function (e) {
             console.log("run dispose");
             terminal.dispose()
+            $(this).off(e);    // remove this listener
+            $(this).modal('destroy');  // take down the modal object
+            $(this).remove();    // remove the modal element, at last.
         }
     }).modal('show')
 })
