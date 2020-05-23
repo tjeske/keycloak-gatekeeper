@@ -7,6 +7,7 @@ import * as XtermWebfont from 'xterm-webfont'
 require('typeface-courier-prime')
 
 let terminal: Terminal
+let socket: WebSocket
 let handle: number
 
 function showStartNewAppModal(templateName: string, params: Map<string, string>, table: DataTables.Api) {
@@ -209,6 +210,9 @@ function initAppStatusView(): DataTables.Api {
         });
     });
     $('#app-status-table').on('click', '.app-log-btn', function (e) {
+        let target = $(e.target)
+        let containerId = target.data("container-id")
+
         let appName = "TestApp"
     
         let modal = `
@@ -231,7 +235,7 @@ function initAppStatusView(): DataTables.Api {
                     lineHeight: 1,
                     fontSize: 11
                 });
-                const socket = new WebSocket('ws://localhost:9090/echo')
+                socket = new WebSocket(`ws://localhost:3000/udesk/appLog/${containerId}`)
                 const attachAddon = new AttachAddon(socket)
                 const fitAddon = new FitAddon()
             
@@ -239,15 +243,15 @@ function initAppStatusView(): DataTables.Api {
                 terminal.loadAddon(attachAddon)
                 terminal.loadAddon(fitAddon)
                 
-                let x = document.getElementById('terminal') as HTMLElement
-                console.log(x);
-                
-                terminal.open(x)
+                terminal.open(document.getElementById('terminal') as HTMLElement)
                 fitAddon.fit()
-    
-                terminal.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
             },
             onHidden: function (e) {
+                console.log("close");
+                // socket.send("close")
+                socket.close()
+                console.log("closed");
+                
                 terminal.dispose()
                 $(this).off(e);    // remove this listener
                 $(this).modal('destroy');  // take down the modal object

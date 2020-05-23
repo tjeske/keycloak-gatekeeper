@@ -82,7 +82,7 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		owner := container.Labels["udesk_owner"]
+		owner := container.Config.Labels["udesk_owner"]
 		if user.name != owner {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -111,7 +111,7 @@ func (r *oauthProxy) proxyMiddleware(next http.Handler) http.Handler {
 			req.Header.Set(k, v)
 		}
 
-		endpoint, err := url.Parse("http://localhost:" + container.Labels["udesk_entry_port"])
+		endpoint, err := url.Parse("http://localhost:" + container.Config.Labels["udesk_entry_port"])
 
 		// @note: by default goproxy only provides a forwarding proxy, thus all requests have to be absolute and we must update the host headers
 		req.URL.Host = endpoint.Host

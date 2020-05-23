@@ -214,7 +214,7 @@ func (dc *DockerClient) GetStatus() []types.Container {
 	return containers
 }
 
-func (dc *DockerClient) GetContainer(uuid string) (*types.Container, error) {
+func (dc *DockerClient) GetContainer(uuid string) (*types.ContainerJSON, error) {
 	opts := types.ContainerListOptions{All: true,
 		Filters: filters.NewArgs(filters.Arg("label", "udesk_uuid="+uuid)),
 	}
@@ -223,7 +223,11 @@ func (dc *DockerClient) GetContainer(uuid string) (*types.Container, error) {
 		return nil, err
 	}
 	if len(container) > 0 {
-		return &container[0], nil
+		c, err := dc.dockerCli.Client().ContainerInspect(context.Background(), container[0].ID)
+		if err != nil {
+			return nil, err
+		}
+		return &c, nil
 	}
 	return nil, errors.New("found more than one container")
 }
@@ -233,7 +237,7 @@ func (dc *DockerClient) RemoveContainer(uuid string) error {
 	if err != nil {
 		return err
 	}
-	err = dc.dockerCli.Client().ContainerRemove(context.Background(), container.ID, types.ContainerRemoveOptions{Force: true})
+	err = dc.dockerCli.Client().ContainerRemove(context.Background(), container.Name, types.ContainerRemoveOptions{Force: true})
 	return err
 }
 
@@ -242,7 +246,7 @@ func (dc *DockerClient) PauseContainer(uuid string) error {
 	if err != nil {
 		return err
 	}
-	err = dc.dockerCli.Client().ContainerPause(context.Background(), container.ID)
+	err = dc.dockerCli.Client().ContainerPause(context.Background(), container.Name)
 	return err
 }
 
@@ -251,7 +255,7 @@ func (dc *DockerClient) UnpauseContainer(uuid string) error {
 	if err != nil {
 		return err
 	}
-	err = dc.dockerCli.Client().ContainerUnpause(context.Background(), container.ID)
+	err = dc.dockerCli.Client().ContainerUnpause(context.Background(), container.Name)
 	return err
 }
 

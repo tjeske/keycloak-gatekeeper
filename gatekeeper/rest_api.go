@@ -24,6 +24,7 @@ import (
 type udeskOauthProxy struct {
 	*oauthProxy
 	dockerClient *backend.DockerClient
+	hub          *Hub
 }
 
 // für /searchUser
@@ -40,7 +41,9 @@ var mutex = &sync.Mutex{}
 
 func newUdeskProxy() *udeskOauthProxy {
 	dc := backend.NewDockerClientWithWriter("1.2.3", appLogger)
-	proxy := &udeskOauthProxy{dockerClient: dc}
+	// hub := newHub()
+	// go hub.run()
+	proxy := &udeskOauthProxy{dockerClient: dc} //, hub: hub}
 	return proxy
 }
 func (r *udeskOauthProxy) createReverseProxy() error {
@@ -78,6 +81,11 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 	engine.With(r.authenticationMiddleware()).Get("/udesk/searchUser/{query}", r.searchUser)
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/echo", r.appLogging)
+
+	hub := newHub()
+	go hub.run()
+
+	engine.With(r.authenticationMiddleware()).Get("/udesk/appLog/{query}", r.appLogging2)
 
 	return nil
 }
@@ -300,4 +308,23 @@ func (r *udeskOauthProxy) appLogging(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 	}
+}
+
+func (r *udeskOauthProxy) appLogging2(w http.ResponseWriter, req *http.Request) {
+	conn, err := upgrader2.Upgrade(w, req, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	client := &Client{conn: conn}
+	// client.hub.register <- client
+
+	containerID := chi.URLParam(req, "query")
+	x, err := r.dockerClient.GetContainer(containerID)
+	if err != nil {
+		log.Println("JHGJH")
+		return
+	}
+	go client.streamLog(x.ID, x)
+	go client.closeStreamLog()
 }
