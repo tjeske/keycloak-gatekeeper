@@ -71,10 +71,10 @@ var notWordChar = regexp.MustCompile("\\W")
 func NewDockerClient(version string) *DockerClient {
 	os.Setenv("DOCKER_API_VERSION", "1.25")
 
-	// Docker HTTP API client
-	var httpClient *http.Client
-	client, err := client.NewClient(client.DefaultDockerHost, "1.30", httpClient, nil)
-	util.CheckErr(err)
+	// // Docker HTTP API client
+	// var httpClient *http.Client
+	// client, err := client.NewClient(client.DefaultDockerHost, "1.30", httpClient, nil)
+	// util.CheckErr(err)
 
 	// Docker cli client
 	dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
@@ -83,7 +83,7 @@ func NewDockerClient(version string) *DockerClient {
 	err = dockerCli.Initialize(opts)
 	util.CheckErr(err)
 
-	return &DockerClient{client: client, dockerCli: dockerCli, version: version}
+	return &DockerClient{client: nil, dockerCli: dockerCli, version: version}
 }
 
 func NewDockerClientWithWriter(version string, w io.Writer) *DockerClient {
@@ -188,7 +188,8 @@ func (dc *DockerClient) getBuildCmdArgs(dockerfile string, dockerBuildCtx string
 	return buildCmd
 }
 
-func (dc *DockerClient) Run(containerName, userName string, args2 map[string]string, dockerBuildCtx DockerContext, dockerRunArgs []string, args []string) {
+func (dc *DockerClient) Run(containerName, userName string, args2 map[string]string, dockerBuildCtx DockerContext, dockerRunArgs []string, args []string, cb func()) {
+	// defer cb()
 	cmdDockerRun := cmd_container.NewRunCommand(dc.dockerCli)
 
 	imageID := dc.getImageID(containerName, userName, args2, dockerBuildCtx)
@@ -198,20 +199,20 @@ func (dc *DockerClient) Run(containerName, userName string, args2 map[string]str
 	cmdDockerRun.SilenceErrors = true
 	cmdDockerRun.SilenceUsage = true
 
-	log.Debug("execute \"docker run " + strings.Join(dockerRunCmdArgs, " ") + "\"")
+	log.Info("execute \"docker run " + strings.Join(dockerRunCmdArgs, " ") + "\"")
 
 	err := cmdDockerRun.Execute()
 	util.CheckErr(err)
 }
 
 func (dc *DockerClient) GetStatus() []types.Container {
-	opts := types.ContainerListOptions{All: true,
-		Filters: filters.NewArgs(filters.Arg("label", "udesk")),
-	}
-	containers, err := dc.dockerCli.Client().ContainerList(context.Background(), opts)
-	util.CheckErr(err)
+	// opts := types.ContainerListOptions{All: true,
+	// 	Filters: filters.NewArgs(filters.Arg("label", "udesk")),
+	// }
+	// containers, err := dc.dockerCli.Client().ContainerList(context.Background(), opts)
+	// util.CheckErr(err)
 	// spew.Dump(containers)
-	return containers
+	return make([]types.Container, 0) //containers
 }
 
 func (dc *DockerClient) GetContainer(uuid string) (*types.ContainerJSON, error) {
@@ -289,6 +290,7 @@ func (dc *DockerClient) getRunCmdArgs(dockerRunArgs []string, imageID string, ar
 
 // getDockerContainerImageID returns the Docker image ID for an app hash value
 func (dc *DockerClient) getDockerContainerImageID(hashStr string) (string, error) {
+	fmt.Println("ABC")
 	images, err := dc.client.ImageList(context.Background(), types.ImageListOptions{})
 	util.CheckErr(err)
 	imageID := ""

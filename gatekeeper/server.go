@@ -68,7 +68,7 @@ type oauthProxy struct {
 	upstream  reverseProxy
 }
 
-var appLogger = NewAppLogger(100)
+// var appLogger = NewAppLog(100)
 
 func init() {
 	_, _ = time.LoadLocation("UTC")      // ensure all time is in UTC [NOTE(fredbi): no this does just nothing]

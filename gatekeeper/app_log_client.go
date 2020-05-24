@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -23,17 +24,20 @@ var upgrader2 = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// Client is a middleman between the websocket connection and the hub.
-type Client struct {
-	// hub *Hub
+// AppLogClient is a middleman between the websocket connection and the hub.
+type AppLogClient struct {
+	app *App
 
 	// The websocket connection.
 	conn *websocket.Conn
+
+	ringBuffer *Ringbuf
+	// stepsRingBuffer *Ringbuf
 }
 
-func (c *Client) closeStreamLog() {
+func (c *AppLogClient) closeStreamLog() {
 	defer func() {
-		// c.hub.unregister <- c
+		c.app.unregisterLogClient(c)
 		c.conn.Close()
 	}()
 	for {
@@ -42,10 +46,29 @@ func (c *Client) closeStreamLog() {
 	}
 }
 
-func (c *Client) streamLog(containerID string, config *types.ContainerJSON) {
-	os.Setenv("DOCKER_API_VERSION", "1.25")
+func (c *AppLogClient) streamLog(containerID string, config *types.ContainerJSON) {
+	// write provisionLog
+	c.app.provisionLog.Do(func(p interface{}) {
+		if p != nil {
+			x := p.(string)
+			c.ringBuffer.Input <- x
+		}
+	})
+
+	for {
+		data := <-c.ringBuffer.Output
+		if data == nil {
+			break
+		}
+		err := c.conn.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
+		if err != nil {
+			log.Println("write:", err)
+			break
+		}
+	}
 
 	// Docker HTTP API client
+	os.Setenv("DOCKER_API_VERSION", "1.25")
 	var httpClient *http.Client
 	client, _ := client.NewClient(client.DefaultDockerHost, "1.30", httpClient, nil)
 	reader, err := client.ContainerLogs(context.Background(), containerID, types.ContainerLogsOptions{

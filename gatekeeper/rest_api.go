@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,8 +24,7 @@ import (
 
 type udeskOauthProxy struct {
 	*oauthProxy
-	dockerClient *backend.DockerClient
-	hub          *Hub
+	appHub *AppHub
 }
 
 // für /searchUser
@@ -40,10 +40,8 @@ type Profile struct {
 var mutex = &sync.Mutex{}
 
 func newUdeskProxy() *udeskOauthProxy {
-	dc := backend.NewDockerClientWithWriter("1.2.3", appLogger)
-	// hub := newHub()
-	// go hub.run()
-	proxy := &udeskOauthProxy{dockerClient: dc} //, hub: hub}
+	hub := newHub()
+	proxy := &udeskOauthProxy{appHub: hub}
 	return proxy
 }
 func (r *udeskOauthProxy) createReverseProxy() error {
@@ -80,10 +78,7 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/searchUser/{query}", r.searchUser)
 
-	engine.With(r.authenticationMiddleware()).Get("/udesk/echo", r.appLogging)
-
-	hub := newHub()
-	go hub.run()
+	// engine.With(r.authenticationMiddleware()).Get("/udesk/echo", r.appLogging)
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/appLog/{query}", r.appLogging2)
 
@@ -112,8 +107,8 @@ func (r *udeskOauthProxy) startApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app := storageProvider.GetTemplateByName(templateName)
-	if app == nil {
+	appTemplate := storageProvider.GetTemplateByName(templateName)
+	if appTemplate == nil {
 		http.Error(w, "cannot find template", http.StatusInternalServerError)
 		return
 	}
@@ -145,42 +140,49 @@ func (r *udeskOauthProxy) startApp(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	uuid := uuid.New().String()
+	uuid := uuid.New()
+	uuidStr := uuid.String()
 	name := req.URL.Query().Get("name")
 	dockerRunArgs := []string{
 		"-d",
-		"-p", strconv.Itoa(port) + ":" + strconv.Itoa(app.InternalPort),
-		"--label", "udesk_uuid=" + uuid,
+		"-p", strconv.Itoa(port) + ":" + strconv.Itoa(appTemplate.InternalPort),
+		"--label", "udesk_uuid=" + uuidStr,
 		"--label", "udesk_entry_port=" + strconv.Itoa(port),
 		"--label", "udesk_owner=" + user.name,
 		"--label", "udesk_name=" + name,
 	}
 
-	go r.dockerClient.Run(app.Name, user.name, args, app, dockerRunArgs, []string{})
+	// app := NewApp()
+	// r.appHub.addApp(uuid, app)
+
+	sw := backend.NewDockerClientWithWriter("1.2.3", os.Stdout)
+	sw.Run(appTemplate.Name, user.name, args, appTemplate, dockerRunArgs, []string{}, func() {})
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte("{}"))
+
+	fmt.Println("finished")
 }
 
 func (r *udeskOauthProxy) removeApp(w http.ResponseWriter, req *http.Request) {
-	uuid := chi.URLParam(req, "query")
-	err := r.dockerClient.RemoveContainer(uuid)
+	uuidStr := chi.URLParam(req, "query")
+	err := r.appHub.removeApp(uuid.MustParse(uuidStr))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func (r *udeskOauthProxy) pauseApp(w http.ResponseWriter, req *http.Request) {
-	containerID := chi.URLParam(req, "query")
-	err := r.dockerClient.PauseContainer(containerID)
+	uuidStr := chi.URLParam(req, "query")
+	err := r.appHub.pauseApp(uuid.MustParse(uuidStr))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func (r *udeskOauthProxy) unpauseApp(w http.ResponseWriter, req *http.Request) {
-	containerID := chi.URLParam(req, "query")
-	err := r.dockerClient.UnpauseContainer(containerID)
+	uuidStr := chi.URLParam(req, "query")
+	err := r.appHub.unpauseApp(uuid.MustParse(uuidStr))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -196,7 +198,7 @@ func (r *udeskOauthProxy) switchApp(w http.ResponseWriter, req *http.Request) {
 
 func (r *udeskOauthProxy) dockerStatus(w http.ResponseWriter, req *http.Request) {
 
-	containers := r.dockerClient.GetStatus()
+	containers := dockerClient.GetStatus()
 	y := [][]string{}
 	for _, container := range containers {
 
@@ -292,23 +294,23 @@ var upgrader = websocket.Upgrader{
 	},
 } // use default options
 
-func (r *udeskOauthProxy) appLogging(w http.ResponseWriter, req *http.Request) {
-	c, err := upgrader.Upgrade(w, req, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-	defer c.Close()
-	for {
-		user, err := r.getIdentity(req)
-		data := <-appLogger.GetLoggerStream(user.name, user.token.RawHeader)
-		err = c.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
-		if err != nil {
-			log.Println("write:", err)
-			break
-		}
-	}
-}
+// func (r *udeskOauthProxy) appLogging(w http.ResponseWriter, req *http.Request) {
+// 	c, err := upgrader.Upgrade(w, req, nil)
+// 	if err != nil {
+// 		log.Print("upgrade:", err)
+// 		return
+// 	}
+// 	defer c.Close()
+// 	for {
+// 		user, err := r.getIdentity(req)
+// 		data := <-appLogger.GetLoggerStream(user.name, user.token.RawHeader)
+// 		err = c.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
+// 		if err != nil {
+// 			log.Println("write:", err)
+// 			break
+// 		}
+// 	}
+// }
 
 func (r *udeskOauthProxy) appLogging2(w http.ResponseWriter, req *http.Request) {
 	conn, err := upgrader2.Upgrade(w, req, nil)
@@ -316,13 +318,14 @@ func (r *udeskOauthProxy) appLogging2(w http.ResponseWriter, req *http.Request) 
 		log.Println(err)
 		return
 	}
-	client := &Client{conn: conn}
-	// client.hub.register <- client
+	uuidStr := chi.URLParam(req, "query")
 
-	containerID := chi.URLParam(req, "query")
-	x, err := r.dockerClient.GetContainer(containerID)
+	app, err := r.appHub.getApp(uuid.MustParse(uuidStr))
+	client := &AppLogClient{app: app, conn: conn}
+	app.registerLogClient(client)
+
+	x, err := app.dc.GetContainer(uuidStr)
 	if err != nil {
-		log.Println("JHGJH")
 		return
 	}
 	go client.streamLog(x.ID, x)

@@ -29,7 +29,7 @@ import (
 var log = logrus.New()
 
 func main() {
-	log.Level = logrus.DebugLevel
+	// log.Level = logrus.DebugLevel
 
 	// determine directory of executable
 	executableDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
