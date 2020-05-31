@@ -620,7 +620,7 @@ func (r *oauthProxy) createUpstreamProxy(upstream *url.URL) (*goproxy.ProxyHttpS
 						var genElements []string
 						for _, appName := range appNames {
 							genElements = append(genElements, fmt.Sprintf(
-								`<a href="http://localhost:3000/udesk/switchApp/%s" class="item">
+								`<a href="http://localhost:3000/?udesk-switch-app=%s" class="item">
 								<i class="play green icon" style="float: none;margin: 0em 0.35714286em 0em 0em;"></i> %s - <span class="ui grey text">%s</span>
 								</a>`, appName.Uuid, appName.Name, "foo"))
 						}

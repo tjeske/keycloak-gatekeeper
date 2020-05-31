@@ -71,10 +71,10 @@ var notWordChar = regexp.MustCompile("\\W")
 func NewDockerClient(version string) *DockerClient {
 	os.Setenv("DOCKER_API_VERSION", "1.25")
 
-	// // Docker HTTP API client
-	// var httpClient *http.Client
-	// client, err := client.NewClient(client.DefaultDockerHost, "1.30", httpClient, nil)
-	// util.CheckErr(err)
+	// Docker HTTP API client
+	var httpClient *http.Client
+	client, err := client.NewClient(client.DefaultDockerHost, "1.30", httpClient, nil)
+	util.CheckErr(err)
 
 	// Docker cli client
 	dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
@@ -83,7 +83,7 @@ func NewDockerClient(version string) *DockerClient {
 	err = dockerCli.Initialize(opts)
 	util.CheckErr(err)
 
-	return &DockerClient{client: nil, dockerCli: dockerCli, version: version}
+	return &DockerClient{client: client, dockerCli: dockerCli, version: version}
 }
 
 func NewDockerClientWithWriter(version string, w io.Writer) *DockerClient {
@@ -205,14 +205,45 @@ func (dc *DockerClient) Run(containerName, userName string, args2 map[string]str
 	util.CheckErr(err)
 }
 
+func (dc *DockerClient) Create(containerName, userName string, args2 map[string]string, dockerBuildCtx DockerContext, dockerRunArgs []string, args []string, cb func()) {
+	// defer cb()
+	cmdDockerRun := cmd_container.NewCreateCommand(dc.dockerCli)
+
+	imageID := dc.getImageID(containerName, userName, args2, dockerBuildCtx)
+
+	dockerRunCmdArgs := dc.getRunCmdArgs(dockerRunArgs, imageID, args)
+	cmdDockerRun.SetArgs(dockerRunCmdArgs)
+	cmdDockerRun.SilenceErrors = true
+	cmdDockerRun.SilenceUsage = true
+
+	log.Info("execute \"docker create " + strings.Join(dockerRunCmdArgs, " ") + "\"")
+
+	err := cmdDockerRun.Execute()
+	util.CheckErr(err)
+}
+
+func (dc *DockerClient) Start(containerName string) {
+	// defer cb()
+	cmdDockerRun := cmd_container.NewStartCommand(dc.dockerCli)
+
+	dockerRunCmdArgs := []string{containerName} //dc.getRunCmdArgs(dockerRunArgs, imageID, args)
+	cmdDockerRun.SetArgs(dockerRunCmdArgs)
+	cmdDockerRun.SilenceErrors = true
+	cmdDockerRun.SilenceUsage = true
+
+	log.Info("execute \"docker start " + containerName + "\"")
+
+	err := cmdDockerRun.Execute()
+	util.CheckErr(err)
+}
+
 func (dc *DockerClient) GetStatus() []types.Container {
-	// opts := types.ContainerListOptions{All: true,
-	// 	Filters: filters.NewArgs(filters.Arg("label", "udesk")),
-	// }
-	// containers, err := dc.dockerCli.Client().ContainerList(context.Background(), opts)
-	// util.CheckErr(err)
-	// spew.Dump(containers)
-	return make([]types.Container, 0) //containers
+	opts := types.ContainerListOptions{All: true,
+		Filters: filters.NewArgs(filters.Arg("label", "udesk")),
+	}
+	containers, err := dc.dockerCli.Client().ContainerList(context.Background(), opts)
+	util.CheckErr(err)
+	return containers
 }
 
 func (dc *DockerClient) GetContainer(uuid string) (*types.ContainerJSON, error) {

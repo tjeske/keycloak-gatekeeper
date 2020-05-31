@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/phayes/freeport"
-	"github.com/tjeske/keycloak-gatekeeper/backend"
 	storge "github.com/tjeske/keycloak-gatekeeper/storage"
 )
 
@@ -71,8 +69,6 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 	engine.With(r.authenticationMiddleware()).Get("/udesk/pauseApp/{query}", r.pauseApp)
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/unpauseApp/{query}", r.unpauseApp)
-
-	engine.With(r.authenticationMiddleware()).Get("/udesk/switchApp/{query}", r.switchApp)
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/dockerStatus", r.dockerStatus)
 
@@ -144,7 +140,7 @@ func (r *udeskOauthProxy) startApp(w http.ResponseWriter, req *http.Request) {
 	uuidStr := uuid.String()
 	name := req.URL.Query().Get("name")
 	dockerRunArgs := []string{
-		"-d",
+		"--rm",
 		"-p", strconv.Itoa(port) + ":" + strconv.Itoa(appTemplate.InternalPort),
 		"--label", "udesk_uuid=" + uuidStr,
 		"--label", "udesk_entry_port=" + strconv.Itoa(port),
@@ -155,8 +151,9 @@ func (r *udeskOauthProxy) startApp(w http.ResponseWriter, req *http.Request) {
 	// app := NewApp()
 	// r.appHub.addApp(uuid, app)
 
-	sw := backend.NewDockerClientWithWriter("1.2.3", os.Stdout)
-	sw.Run(appTemplate.Name, user.name, args, appTemplate, dockerRunArgs, []string{}, func() {})
+	dockerClient.Create(appTemplate.Name, user.name, args, appTemplate, dockerRunArgs, []string{}, func() {})
+	x, _ := dockerClient.GetContainer(uuidStr)
+	dockerClient.Start(x.ID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte("{}"))
@@ -186,14 +183,6 @@ func (r *udeskOauthProxy) unpauseApp(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-func (r *udeskOauthProxy) switchApp(w http.ResponseWriter, req *http.Request) {
-	containerID := chi.URLParam(req, "query")
-	fmt.Println(containerID)
-	r.dropCookie(w, req.Host, "udesk_current_app", containerID, 0)
-	fmt.Println(req.Host)
-	http.Redirect(w, req, "http://"+req.Host, http.StatusSeeOther)
 }
 
 func (r *udeskOauthProxy) dockerStatus(w http.ResponseWriter, req *http.Request) {

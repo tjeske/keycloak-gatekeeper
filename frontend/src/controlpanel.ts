@@ -131,7 +131,7 @@ function initAppStatusView(): DataTables.Api {
                 // name
                 "render": function (name: string, type: string, row: string[]) {
                     let uuid = row[4]
-                    return `<a href="/udesk/switchApp/${uuid}">${name}</a><span style="float:right;"><i class="red icon delete app-remove-btn" data-container-name="${name}" data-container-id="${uuid}"></i></span>`
+                    return `<a href="http://localhost:3000/?udesk-switch-app=${uuid}">${name}</a><span style="float:right;"><i class="red icon delete app-remove-btn" data-container-name="${name}" data-container-id="${uuid}"></i></span>`
                 },
                 "targets": 0
             },
