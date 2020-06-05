@@ -47,6 +47,7 @@ require (
 	github.com/tjeske/containerflight v0.3.0
 	go.mongodb.org/mongo-driver v1.3.1
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc
 )
 
 replace github.com/spf13/pflag => github.com/thaJeztah/pflag v1.0.3-0.20180821151913-4cb166e4f25a

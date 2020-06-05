@@ -46,7 +46,7 @@ func (c *AppLogClient) closeStreamLog() {
 	}
 }
 
-func (c *AppLogClient) streamLog(containerID string, config *types.ContainerJSON) {
+func (c *AppLogClient) streamLog(uuid string) {
 	// write provisionLog
 	c.app.provisionLog.Do(func(p interface{}) {
 		if p != nil {
@@ -56,25 +56,32 @@ func (c *AppLogClient) streamLog(containerID string, config *types.ContainerJSON
 		}
 	})
 
-	for {
-		select {
-		case data, ok := <-c.ringBuffer.Output:
-			if !ok {
-				break
-			}
-			err := c.conn.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
-			if err != nil {
-				log.Println("write:", err)
-				break
+	if !c.app.provisioned {
+		for {
+			select {
+			case data, ok := <-c.ringBuffer.Output:
+				if !ok {
+					break
+				}
+				err := c.conn.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
+				if err != nil {
+					log.Println("write:", err)
+					break
+				}
 			}
 		}
 	}
 
+	x, err := c.app.dc.GetContainer(uuid)
+	if err != nil {
+		return
+	}
+	config := x
 	// Docker HTTP API client
 	os.Setenv("DOCKER_API_VERSION", "1.25")
 	var httpClient *http.Client
 	client, _ := client.NewClient(client.DefaultDockerHost, "1.30", httpClient, nil)
-	reader, err := client.ContainerLogs(context.Background(), containerID, types.ContainerLogsOptions{
+	reader, err := client.ContainerLogs(context.Background(), x.ID, types.ContainerLogsOptions{
 		ShowStderr: true,
 		ShowStdout: true,
 		Timestamps: false,

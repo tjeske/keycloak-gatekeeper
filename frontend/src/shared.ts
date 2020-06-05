@@ -17,7 +17,7 @@ interface Access {
     permissions: string
     args: Map<string, string>
 }
-export interface App {
+export interface Template {
     name: string
     params: Map<string, string>
     dockerfile: string
@@ -26,7 +26,7 @@ export interface App {
     internalPort: string
 }
 
-let config: App[] = []
+let config: Template[] = []
 
 /**
  * Initialize drop down list for app templates.
@@ -35,7 +35,7 @@ export function initTemplateDropDown() {
     // get templates
     $.ajax({
         url: "/udesk/getTemplates",
-        success: function (result: {data : App[]}) {
+        success: function (result: {data : Template[]}) {
             config = result.data
             let values = result.data.map(it => {
                 let values: { [key: string]: string; } = {}

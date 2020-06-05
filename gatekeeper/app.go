@@ -89,8 +89,7 @@ func (al *App) Write(p []byte) (n int, err error) {
 // 	return newSessionInfo.stepsRingBuffer.Output
 // }
 
-func (a *App) 
-registerLogClient(client *AppLogClient) {
+func (a *App) registerLogClient(client *AppLogClient) {
 	a.logClientsMutex.Lock()
 	defer a.logClientsMutex.Unlock()
 
@@ -105,6 +104,9 @@ func (a *App) unregisterLogClient(client *AppLogClient) {
 }
 
 func (a *App) ProvisionFinished() {
+	a.logClientsMutex.Lock()
+	defer a.logClientsMutex.Unlock()
+
 	for client := range a.logClients {
 		close(client.ringBuffer.Input)
 	}

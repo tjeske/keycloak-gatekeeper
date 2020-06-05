@@ -143,6 +143,8 @@ function initAppStatusView(): DataTables.Api {
                     switch (state) {
                         case "running":
                             return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i><i class="black icon pause app-log-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
+                        case "provisioning":
+                            return `${state} <i class="orange icon pause app-pause-btn" data-container-name="${name}" data-container-id="${containerId}"></i><i class="black icon pause app-log-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
                         case "paused":
                             return `${state} <i class="green icon play app-unpause-btn" data-container-name="${name}" data-container-id="${containerId}"></i>`
                         default:
@@ -228,7 +230,6 @@ function initAppStatusView(): DataTables.Api {
                 // clearInterval(handle)
             },
             onVisible: function (e) {
-                console.log("run open");
                 terminal = new Terminal({
                     cursorBlink: false,
                     tabStopWidth: 4,

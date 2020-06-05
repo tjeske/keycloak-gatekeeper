@@ -223,6 +223,23 @@ func (r *udeskOauthProxy) dockerStatus(w http.ResponseWriter, req *http.Request)
 		})
 	}
 
+abc:
+	for uuid := range r.appHub.apps {
+		for _, x := range y {
+			if x[4] == uuid.String() {
+				continue abc
+			}
+		}
+		y = append(y, []string{
+			"jhgjhg",
+			"owner",
+			" ago",
+			"provisioning",
+			uuid.String(),
+		})
+	}
+	fmt.Println(r.appHub.apps)
+
 	js, err := json.Marshal(struct {
 		Data [][]string `json:"data"`
 	}{y})
@@ -316,11 +333,7 @@ func (r *udeskOauthProxy) appLogging2(w http.ResponseWriter, req *http.Request) 
 	client := &AppLogClient{app: app, conn: conn, ringBuffer: NewRingBuffer(100)}
 	app.registerLogClient(client)
 
-	x, err := app.dc.GetContainer(uuidStr)
-	if err != nil {
-		return
-	}
-	go client.streamLog(x.ID, x)
+	go client.streamLog(uuidStr)
 	go client.closeStreamLog()
 }
 
