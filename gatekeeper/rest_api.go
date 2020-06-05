@@ -78,6 +78,8 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/appLog/{query}", r.appLogging2)
 
+	engine.Get("/udesk/logout", r.logout)
+
 	return nil
 }
 
@@ -148,12 +150,13 @@ func (r *udeskOauthProxy) startApp(w http.ResponseWriter, req *http.Request) {
 		"--label", "udesk_name=" + name,
 	}
 
-	// app := NewApp()
-	// r.appHub.addApp(uuid, app)
+	app := NewApp()
+	r.appHub.addApp(uuid, app)
 
-	dockerClient.Create(appTemplate.Name, user.name, args, appTemplate, dockerRunArgs, []string{}, func() {})
+	app.dc.Create(appTemplate.Name, user.name, args, appTemplate, dockerRunArgs, []string{}, func() {})
 	x, _ := dockerClient.GetContainer(uuidStr)
-	dockerClient.Start(x.ID)
+	app.dc.Start(x.ID)
+	app.ProvisionFinished()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte("{}"))
@@ -310,7 +313,7 @@ func (r *udeskOauthProxy) appLogging2(w http.ResponseWriter, req *http.Request) 
 	uuidStr := chi.URLParam(req, "query")
 
 	app, err := r.appHub.getApp(uuid.MustParse(uuidStr))
-	client := &AppLogClient{app: app, conn: conn}
+	client := &AppLogClient{app: app, conn: conn, ringBuffer: NewRingBuffer(100)}
 	app.registerLogClient(client)
 
 	x, err := app.dc.GetContainer(uuidStr)
@@ -319,4 +322,8 @@ func (r *udeskOauthProxy) appLogging2(w http.ResponseWriter, req *http.Request) 
 	}
 	go client.streamLog(x.ID, x)
 	go client.closeStreamLog()
+}
+
+func (r *udeskOauthProxy) logout(w http.ResponseWriter, req *http.Request) {
+	r.logoutHandler(w, req)
 }

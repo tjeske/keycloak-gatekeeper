@@ -2,7 +2,7 @@ package gatekeeper
 
 import (
 	"container/ring"
-	"os"
+	"fmt"
 	"regexp"
 	"sync"
 
@@ -24,13 +24,12 @@ type App struct {
 	// currentStep int64
 }
 
-var abc = backend.NewDockerClientWithWriter("1.2.3", os.Stdout)
-
 func NewApp() (result *App) {
 	app := &App{
 		provisionLog: ring.New(1000),
 		logClients:   make(map[*AppLogClient]bool),
 	}
+	var abc = backend.NewDockerClientWithWriter("1.2.3", app)
 	app.dc = abc
 	return app
 }
@@ -38,10 +37,10 @@ func NewApp() (result *App) {
 var r = regexp.MustCompile(`Step (?P<currentStep>\d+)/(?P<maxSteps>\d+) : `)
 
 func (al *App) Write(p []byte) (n int, err error) {
-	// al.logClientsMutex.Lock()
-	// defer al.logClientsMutex.Unlock()
-	// newElement := string(p)
-	// fmt.Println(p)
+	al.logClientsMutex.Lock()
+	defer al.logClientsMutex.Unlock()
+	newElement := string(p)
+	fmt.Println(p)
 
 	// // match := r.FindStringSubmatch(newElement)
 	// // if match != nil {
@@ -51,16 +50,16 @@ func (al *App) Write(p []byte) (n int, err error) {
 	// // 	al.maxSteps = maxSteps
 	// // }
 
-	// al.provisionLog.Value = newElement
-	// al.provisionLog = al.provisionLog.Next()
-	// for client := range al.logClients {
-	// 	client.ringBuffer.Input <- string(p)
-	// 	// if al.maxSteps != 0 {
-	// 	// 	sessionInfo.stepsRingBuffer.Input <- string((al.currentStep / al.maxSteps) * 100)
-	// 	// } else {
-	// 	// 	sessionInfo.stepsRingBuffer.Input <- string(1)
-	// 	// }
-	// }
+	al.provisionLog.Value = newElement
+	al.provisionLog = al.provisionLog.Next()
+	for client := range al.logClients {
+		client.ringBuffer.Input <- string(p)
+		// if al.maxSteps != 0 {
+		// 	sessionInfo.stepsRingBuffer.Input <- string((al.currentStep / al.maxSteps) * 100)
+		// } else {
+		// 	sessionInfo.stepsRingBuffer.Input <- string(1)
+		// }
+	}
 	return len(p), nil
 }
 
@@ -90,7 +89,8 @@ func (al *App) Write(p []byte) (n int, err error) {
 // 	return newSessionInfo.stepsRingBuffer.Output
 // }
 
-func (a *App) registerLogClient(client *AppLogClient) {
+func (a *App) 
+registerLogClient(client *AppLogClient) {
 	a.logClientsMutex.Lock()
 	defer a.logClientsMutex.Unlock()
 
@@ -106,7 +106,7 @@ func (a *App) unregisterLogClient(client *AppLogClient) {
 
 func (a *App) ProvisionFinished() {
 	for client := range a.logClients {
-		client.ringBuffer.Input <- nil
+		close(client.ringBuffer.Input)
 	}
 	a.provisioned = true
 }

@@ -51,19 +51,22 @@ func (c *AppLogClient) streamLog(containerID string, config *types.ContainerJSON
 	c.app.provisionLog.Do(func(p interface{}) {
 		if p != nil {
 			x := p.(string)
+			fmt.Println("->" + x)
 			c.ringBuffer.Input <- x
 		}
 	})
 
 	for {
-		data := <-c.ringBuffer.Output
-		if data == nil {
-			break
-		}
-		err := c.conn.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
-		if err != nil {
-			log.Println("write:", err)
-			break
+		select {
+		case data, ok := <-c.ringBuffer.Output:
+			if !ok {
+				break
+			}
+			err := c.conn.WriteMessage(websocket.TextMessage, []byte(strings.ReplaceAll(data.(string), "\n", "\n\r")))
+			if err != nil {
+				log.Println("write:", err)
+				break
+			}
 		}
 	}
 
