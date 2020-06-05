@@ -1,1 +1,0 @@
-declare module 'progressbar.js'

@@ -26,7 +26,7 @@ export interface Template {
     internalPort: string
 }
 
-let config: Template[] = []
+let templates: Template[] = []
 
 /**
  * Initialize drop down list for app templates.
@@ -36,7 +36,7 @@ export function initTemplateDropDown() {
     $.ajax({
         url: "/udesk/getTemplates",
         success: function (result: {data : Template[]}) {
-            config = result.data
+            templates = result.data
             let values = result.data.map(it => {
                 let values: { [key: string]: string; } = {}
                 values['name'] = it.name
@@ -44,8 +44,8 @@ export function initTemplateDropDown() {
                 return values
             });
             ($('#app-dropdown') as any).dropdown('change values', values);
-            if (config.length > 0) {
-                $('#app-dropdown').dropdown('set selected', config[0].name);
+            if (templates.length > 0) {
+                $('#app-dropdown').dropdown('set selected', templates[0].name);
             }
         },
         error: function (result) {
@@ -58,7 +58,7 @@ export function initTemplateDropDown() {
 }
 
 function loadApp(name: string) {
-    let element = config.find(it => 'name' in it && it.name == name)
+    let element = templates.find(it => 'name' in it && it.name == name)
     if (element != undefined) {
         addApp(element.name)
         if ('internalPort' in element) {
