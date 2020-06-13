@@ -19,7 +19,7 @@ import (
 	"regexp"
 )
 
-type App struct {
+type Template struct {
 	Name         string            `json:"name"`
 	Params       map[string]string `json:"params"`
 	Dockerfile   string            `json:"dockerfile"`
@@ -55,17 +55,17 @@ func replaceParameters(str *string, args map[string]string) {
 }
 
 // GetDockerRunArgs returns for an app file the resolved docker run arguments
-func (a *App) GetDockerRunArgs() (dockerRunArgs []string) {
+func (a *Template) GetDockerRunArgs() (dockerRunArgs []string) {
 	return []string{}
 }
 
-func (a *App) GetDockerFile(args map[string]string) string {
+func (a *Template) GetDockerFile(args map[string]string) string {
 	dockerFile := a.Dockerfile
 	replaceParameters(&dockerFile, args)
 	return dockerFile
 }
 
-func (a *App) GetDockerFileContextFiles(args map[string]string) map[string]string {
+func (a *Template) GetDockerFileContextFiles(args map[string]string) map[string]string {
 	resolvedFiles := make(map[string]string)
 	for file, content := range a.Files {
 		replaceParameters(&content, args)

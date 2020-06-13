@@ -51,7 +51,6 @@ func (c *AppLogClient) streamLog(uuid string) {
 	c.app.provisionLog.Do(func(p interface{}) {
 		if p != nil {
 			x := p.(string)
-			fmt.Println("->" + x)
 			c.ringBuffer.Input <- x
 		}
 	})

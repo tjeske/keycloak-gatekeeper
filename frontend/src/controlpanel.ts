@@ -1,4 +1,4 @@
-import { addParameter, initAppDropDown, initTemplateDropDown, showRemoveContainerModal, App } from 'shared'
+import { showRemoveContainerModal, Template } from 'shared'
 import "xterm/css/xterm.css";
 import { Terminal } from 'xterm';
 import { AttachAddon } from 'xterm-addon-attach';
@@ -95,7 +95,7 @@ function initStartNewAppButton(table: DataTables.Api) {
         let templateName = $('#app-dropdown').dropdown('get value');
         $.ajax({
             url: "/udesk/getTemplates",
-            success: function (result: { data: App[] }) {
+            success: function (result: { data: Template[] }) {
                 let config = result.data
                 let element = config.find(it => 'name' in it && it.name == templateName)
 
@@ -267,6 +267,19 @@ function initAppStatusView(): DataTables.Api {
     }, 1000);
 
     return table
+}
+
+function initTemplateDropDown() {
+    // make checkboxes visible without label
+    $('.checkbox').checkbox();
+    $('#app-dropdown').dropdown({
+        onChange: function (value, text, $selectedItem) {
+            $('#app-dropdown').dropdown('set selected', value)
+            if (value != "") {
+                loadTemplate(value)
+            }
+        }
+    });
 }
 
 $(document).ready(function () {

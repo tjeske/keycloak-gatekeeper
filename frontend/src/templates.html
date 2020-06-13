@@ -17,35 +17,37 @@
 
         <div class="ui bottom attached segment">
             <div>
-                <form action="admin.html" method="post" class="ui form">
+                <form class="ui form">
                     <div class="ui two column grid">
                         <div class="column">
                             <!-- Application -->
-                            <div class="field">
-                                <label>Application</label>
-                                <table class="ui very basic collapsing table">
-                                    <tbody>
-                                        <tr>
-                                            <td>
-                                                <select class="ui dropdown" id="app-dropdown">
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <div class="ui icon top left pointing dropdown button"
-                                                    id="app-edit-dropdown">
-                                                    <i class="wrench icon"></i>
-                                                    <div class="menu">
-                                                        <div class="item" id="add-app-btn">New</div>
-                                                        <div class="item" id="change-app-name-btn">Edit Name</div>
-                                                        <div class="item" id="remove-app-btn">Remove</div>
-                                                    </div>
+                            <h3>Template Configuration</h3>
+                            <table class="ui very basic collapsing table">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <select class="ui dropdown" id="app-dropdown">
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <div class="ui icon top left pointing dropdown button"
+                                                id="app-edit-dropdown">
+                                                <i class="wrench icon"></i>
+                                                <div class="menu">
+                                                    <div class="item" id="add-app-btn">New</div>
+                                                    <div class="item" id="remove-app-btn">Remove</div>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
 
+                            <!-- Name -->
+                            <div class="field">
+                                <label>Name</label>
+                                <input type="text" name="name" placeholder="Name" id="name">
+                            </div>
                             <!-- Internal Port -->
                             <div class="field">
                                 <label>Internal port</label>
@@ -63,82 +65,78 @@
                     </div>
 
                     <!-- Parameters -->
+                    <h3>Parameters</h3>
                     <div class="field">
-                        <label>Parameters</label>
                         <table class="ui very basic collapsing table" id="params-table">
                             <tbody id="params-table-body">
                                 <tr>
                                 </tr>
                             </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>
+                                        <div class="ui positive mini button floating right" id="add-new-parameter-btn">
+                                            Add Parameter
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tfoot>
                         </table>
-                        <div class="ui icon top button" id="add-new-parameter-btn">
-                            <i class="plus icon"></i>
-                        </div>
                     </div>
 
                     <!-- Dockerfile -->
-                    <div class="field">
-                        <label>Dockerfile</label>
-                        <textarea id="dockerfile-textarea" name=""></textarea>
-                    </div>
+                    <h3>Dockerfile</h3>
+                    <textarea name="dockerfile" id="dockerfile-textarea" style="font-family:monospace;"></textarea>
 
                     <!-- Files -->
-                    <div class="field">
-                        <label>Additional files</label>
-                        <table class="ui very basic collapsing table" id="files-table" style="width:100%;">
-                            <tbody id="files-table-body">
-                                <tr class="entry">
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div class="ui icon top button" id="add-new-file-btn">
-                            <i class="plus icon"></i>
-                        </div>
-                    </div>
+                    <h3>Files</h3>
+                    <table class="ui very basic collapsing table" id="files-table" style="width:100%;">
+                        <tbody id="files-table-body">
+                            <tr class="entry">
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>
+                                    <div class="ui positive mini button floating right" id="add-new-file-btn">
+                                        Add File
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
 
                     <!-- Access -->
-                    <div class="field">
-                        <label>Access</label>
-                        <table class="ui celled structured table" id="access-table">
-                            <thead>
-                                <tr>
-                                    <th rowspan="2" class="ui center aligned">User / Group</th>
-                                    <th colspan="3" class="ui center aligned">Permissions</th>
-                                </tr>
-                                <tr>
-                                    <th class="ui center aligned">Run</th>
-                                    <th class="ui center aligned">Control</th>
-                                    <th class="ui center aligned">Modify</th>
-                                </tr>
-                            </thead>
-                            <tbody id="access-table-body">
-                                <tr>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div class="ui icon top button" id="add-new-access-btn">
-                            <i class="plus icon"></i>
-                        </div>
-                    </div>
-
-                    <button class="ui button" type="submit">Submit</button>
+                    <h3>Access</h3>
+                    <table class="ui celled structured table" id="access-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" class="ui center aligned">User / Group</th>
+                                <th colspan="3" class="ui center aligned">Permissions</th>
+                            </tr>
+                            <tr>
+                                <th class="ui center aligned">Run</th>
+                                <th class="ui center aligned">Control</th>
+                                <th class="ui center aligned">Modify</th>
+                            </tr>
+                        </thead>
+                        <tbody id="access-table-body">
+                            <tr></tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="right aligned">
+                                    <div class="ui positive mini button floating right" id="add-new-access-btn">
+                                        Add User
+                                    </div>
+                                </td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div class="ui primary submit button">Submit</div>
+                    <div class="ui error message"></div>
                 </form>
-            </div>
-
-            <div>
-                <table class="ui celled table dataTable" id="status-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Owner</th>
-                            <th>Created</th>
-                            <th>Status</th>
-                            <th>Control</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
             </div>
         </div>
     </div>

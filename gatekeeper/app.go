@@ -2,7 +2,6 @@ package gatekeeper
 
 import (
 	"container/ring"
-	"fmt"
 	"regexp"
 	"sync"
 
@@ -40,7 +39,6 @@ func (al *App) Write(p []byte) (n int, err error) {
 	al.logClientsMutex.Lock()
 	defer al.logClientsMutex.Unlock()
 	newElement := string(p)
-	fmt.Println(p)
 
 	// // match := r.FindStringSubmatch(newElement)
 	// // if match != nil {

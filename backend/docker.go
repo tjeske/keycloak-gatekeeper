@@ -321,7 +321,6 @@ func (dc *DockerClient) getRunCmdArgs(dockerRunArgs []string, imageID string, ar
 
 // getDockerContainerImageID returns the Docker image ID for an app hash value
 func (dc *DockerClient) getDockerContainerImageID(hashStr string) (string, error) {
-	fmt.Println("ABC")
 	images, err := dc.client.ImageList(context.Background(), types.ImageListOptions{})
 	util.CheckErr(err)
 	imageID := ""

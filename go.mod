@@ -33,13 +33,14 @@ require (
 )
 
 require (
-	github.com/Nerzal/gocloak/v4 v4.8.0
+	github.com/Nerzal/gocloak/v5 v5.4.0
 	github.com/docker/cli v0.0.0-20200210162036-a4bedce16568
 	github.com/docker/docker v1.14.0-0.20190319215453-e7b5f7dbe98c
 	github.com/docker/go-units v0.4.0
 	github.com/go-chi/docgen v1.0.5
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/google/uuid v1.1.1
+	github.com/gorilla/schema v1.1.0
 	github.com/gorilla/websocket v1.4.1
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/sirupsen/logrus v1.4.2
@@ -47,7 +48,6 @@ require (
 	github.com/tjeske/containerflight v0.3.0
 	go.mongodb.org/mongo-driver v1.3.1
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
-	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc
 )
 
 replace github.com/spf13/pflag => github.com/thaJeztah/pflag v1.0.3-0.20180821151913-4cb166e4f25a

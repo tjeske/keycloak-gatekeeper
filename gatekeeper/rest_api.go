@@ -1,7 +1,6 @@
 package gatekeeper
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,10 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Nerzal/gocloak/v4"
+	"github.com/Nerzal/gocloak/v5"
 	"github.com/docker/go-units"
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
+	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
 	"github.com/phayes/freeport"
 	storge "github.com/tjeske/keycloak-gatekeeper/storage"
@@ -35,6 +35,8 @@ type Profile struct {
 	Description string `json:"description"`
 }
 
+var formDecoder = schema.NewDecoder()
+
 var mutex = &sync.Mutex{}
 
 func newUdeskProxy() *udeskOauthProxy {
@@ -42,6 +44,7 @@ func newUdeskProxy() *udeskOauthProxy {
 	proxy := &udeskOauthProxy{appHub: hub}
 	return proxy
 }
+
 func (r *udeskOauthProxy) createReverseProxy() error {
 
 	// TODO: find better solution
@@ -59,7 +62,11 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 		fs.ServeHTTP(w, r)
 	}))
 
-	engine.Get("/udesk/getTemplates", r.getTemplates)
+	engine.With(r.authenticationMiddleware()).Get("/udesk/getTemplates", r.getAllTemplates)
+
+	engine.With(r.authenticationMiddleware()).Get("/udesk/getTemplate/{query}", r.getTemplate)
+
+	engine.With(r.authenticationMiddleware()).Post("/udesk/updateTemplate/{query}", r.updateTemplate)
 
 	engine.With(r.authenticationMiddleware(),
 		r.identityHeadersMiddleware(r.config.AddClaims)).Get("/udesk/startApp", r.startApp)
@@ -72,7 +79,7 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 
 	engine.With(r.authenticationMiddleware()).Get("/udesk/dockerStatus", r.dockerStatus)
 
-	engine.With(r.authenticationMiddleware()).Get("/udesk/searchUser/{query}", r.searchUser)
+	engine.Get("/udesk/searchUser/{query}", r.searchUser)
 
 	// engine.With(r.authenticationMiddleware()).Get("/udesk/echo", r.appLogging)
 
@@ -83,16 +90,54 @@ func (r *udeskOauthProxy) createReverseProxy() error {
 	return nil
 }
 
-func (r *udeskOauthProxy) getTemplates(w http.ResponseWriter, req *http.Request) {
+func (r *udeskOauthProxy) getAllTemplates(w http.ResponseWriter, req *http.Request) {
 	apps := storageProvider.GetAllTemplates()
 	js, err := json.Marshal(struct {
-		Data []*storge.App `json:"data"`
+		Data *[]storge.TemplateName `json:"data"`
 	}{apps})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func (r *udeskOauthProxy) getTemplate(w http.ResponseWriter, req *http.Request) {
+	name := chi.URLParam(req, "query")
+	app := storageProvider.GetTemplateByName(name)
+	js, err := json.Marshal(struct {
+		Data *storge.Template `json:"data"`
+	}{app})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+type Person struct {
+	Name         string `schema:"name"`
+	InternalPort string `schema:"internalPort"`
+}
+
+func (r *udeskOauthProxy) updateTemplate(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+
+	p := new(Person)
+	err := formDecoder.Decode(p, req.PostForm)
+	fmt.Println(p)
+
+	// name := chi.URLParam(req, "query")
+	// app := storageProvider.GetTemplateByName(name)
+	js, err := json.Marshal(req.Form)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
@@ -238,7 +283,6 @@ abc:
 			uuid.String(),
 		})
 	}
-	fmt.Println(r.appHub.apps)
 
 	js, err := json.Marshal(struct {
 		Data [][]string `json:"data"`
@@ -253,20 +297,21 @@ abc:
 }
 
 func (r *udeskOauthProxy) searchUser(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("KGHHGJG")
+	// u, err := r.getIdentity(req)
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
 
-	u, err := r.getIdentity(req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	client := gocloak.NewClient("http://auth.familie-jeske.net:7080/")
-	token := u.token.RawHeader + "." + u.token.RawPayload + "." + strings.TrimRight(base64.URLEncoding.EncodeToString(u.token.Signature), "=")
+	client := gocloak.NewClient("http://localhost:7080/")
+	//token := u.token.RawHeader + "." + u.token.RawPayload + "." + strings.TrimRight(base64.URLEncoding.EncodeToString(u.token.Signature), "=")
+	token, err := client.LoginAdmin("foo", "foo", "master")
 	users, err := client.GetUsers(
-		token,
+		token.AccessToken,
 		"master",
 		gocloak.GetUsersParams{})
-
+	fmt.Println(users)
 	filteredUserOrGroups := []Profile{}
 	for _, user := range users {
 		if strings.HasPrefix(strings.ToLower(*user.Username), strings.ToLower(chi.URLParam(req, "query"))) {

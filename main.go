@@ -61,7 +61,7 @@ func main() {
 	}
 
 	apps := storage.Provider.GetAllTemplates()
-	for _, app := range apps {
+	for _, app := range *apps {
 		log.Println(app.Name)
 	}
 

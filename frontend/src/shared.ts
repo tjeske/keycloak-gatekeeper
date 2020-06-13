@@ -4,6 +4,7 @@ require('../semantic/dist/components/dimmer')
 require('../semantic/dist/components/dropdown')
 require('../semantic/dist/components/modal')
 require('../semantic/dist/components/search')
+require('../semantic/dist/components/form')
 require('../semantic/dist/components/toast')
 require('../semantic/dist/components/transition')
 import '../semantic/dist/semantic.min.css'
@@ -26,8 +27,6 @@ export interface Template {
     internalPort: string
 }
 
-let templates: Template[] = []
-
 /**
  * Initialize drop down list for app templates.
  */
@@ -35,9 +34,9 @@ export function initTemplateDropDown() {
     // get templates
     $.ajax({
         url: "/udesk/getTemplates",
-        success: function (result: {data : Template[]}) {
-            templates = result.data
-            let values = result.data.map(it => {
+        success: function (result: { data: { name: string; uuid: string}[] }) {
+            let templates = result.data
+            let values = templates.map(it => {
                 let values: { [key: string]: string; } = {}
                 values['name'] = it.name
                 values['value'] = it.name
@@ -57,43 +56,6 @@ export function initTemplateDropDown() {
     });
 }
 
-function loadApp(name: string) {
-    let element = templates.find(it => 'name' in it && it.name == name)
-    if (element != undefined) {
-        addApp(element.name)
-        if ('internalPort' in element) {
-            addInternalPort(element.internalPort)
-        }
-        if ('params' in element) {
-            if (element.params != null) {
-                for (let [key, value] of Object.entries(element.params)) {
-                    addParameter(key, value, "#params-table-body");
-                }
-            }
-        }
-        if ('dockerfile' in element) {
-            addDockerfile(element.dockerfile)
-        }
-        if ('files' in element) {
-            if (element.files != null) {
-                for (let [name, content] of Object.entries(element.files)) {
-                    addFile(name, content);
-                }
-            }
-        }
-        if ('access' in element) {
-            if (element.access != null) {
-                for (let userName in element.access) {
-                    if ('permissions' in element.access[userName]) {
-                        let permissions = element.access[userName].permissions.split(",").map((it: string) => it.trim())
-                        addAccess(userName, permissions.includes("readable"), permissions.includes("controlable"), permissions.includes("modifiable"))
-                    }
-                }
-            }
-        }
-    }
-}
-
 export function addApp(appName: string) {
     // apps.forEach(element => {
     //     element.selected = false;
@@ -104,114 +66,6 @@ export function addApp(appName: string) {
     //     selected: true
     // });
     // $('.ui.dropdown').dropdown('change values', apps)
-}
-
-function addInternalPort(internalPort: string) {
-    $('#internalPort').val(internalPort)
-}
-
-export function addParameter(paramName:string, defaultValue: string, paramsTableBodyId:string) {
-    let row = `
-    <tr>
-        <td>
-            <div class="ui black input"><input type="text" value="${paramName}">
-            </div>
-        </td>
-        <td>=</td>
-        <td>
-            <div class="ui black input"><input type="text" value="${defaultValue}"></div>
-        </td>
-        <td>
-            <div class="ui small icon">
-                <i class="ui right red icon delete"></i>
-            </div>
-        </td>
-    </tr>`
-
-    let paramRow = $(row);
-    paramRow.hide();
-    $(`${paramsTableBodyId} tr:last-child`).after(paramRow);
-    $(`${paramsTableBodyId} tr:last-child td:last-child div`).on('click', function () {
-        $(this).parent().parent().fadeOut(300, function () { $(this).remove(); });
-    });
-    paramRow.fadeIn("slow");
-}
-
-function addDockerfile(fileContent: string) {
-    $('#dockerfile-textarea').val("jhgjhg")
-}
-
-export function addFile(fileName: string, fileContent: string) {
-    let row = `
-    <tr class="entry">
-        <td>
-            <table class="ui very basic table" style="width=100%;">
-                <tbody>
-                    <tr>
-                        <td style="width: 100%;">
-                            <div class="ui black input"><input type="text" value="${fileName}">
-                            </div>
-                        </td>
-                        <td>
-                            <div class="ui small icon">
-                                <i class="ui right red icon delete remove-file-btn"></i>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <textarea name="">${fileContent}</textarea>
-        </td>
-    </tr>`
-
-    let paramRow = $(row);
-    paramRow.hide();
-    $('#files-table-body .entry:last').after(paramRow);
-    $('#files-table-body .entry:last .remove-file-btn').on('click', function () {
-        $(this).parent().parent().parent().parent().parent().parent().fadeOut(300, function () { $(this).remove(); });
-    });
-    paramRow.fadeIn("slow");
-}
-
-export function addAccess(userName: string, isReadable: boolean, isControlable: boolean, isModifiable: boolean) {
-    let row = `
-        <tr>
-            <td>
-                <div class="inline fields">
-                    <label><i class="user icon"></i></label>
-                    <div class="ui search">
-                        <input class="prompt" type="text" placeholder="... etc" value="${userName}">
-                        <div class="results"></div>
-                    </div>
-                    <label style="width: auto; margin-left: auto;"><i class="right icon delete ui red remove-access-btn"></i></label>
-                </div>
-            </td>
-            <td class="ui center aligned">
-                <div class="ui checkbox"><input type="checkbox" name="example"${isReadable ? ` checked` : ``}></div>
-            </td>
-            <td class="ui center aligned">
-                <div class="ui checkbox"><input type="checkbox" name="example"${isControlable ? ` checked` : ``}></div>
-            </td>
-            <td class="ui center aligned">
-                <div class="ui checkbox"><input type="checkbox" name="example"${isModifiable ? ` checked` : ``}></div>
-            </td>
-        </tr>`
-
-    let paramRow = $(row);
-    paramRow.hide();
-    $('#access-table-body tr:last-child').after(paramRow);
-    $('#access-table-body tr:last-child .checkbox').checkbox();
-    $('#access-table-body tr:last-child .remove-access-btn').on('click', function () {
-        $(this).parent().parent().parent().parent().fadeOut(300, function () { $(this).remove(); });
-    });
-    $('.ui.search').search({
-        debug: true,
-        apiSettings: {
-            action: 'search',
-            url: '/udesk/searchUser/{query}'
-        },
-    });
-    paramRow.fadeIn("slow");
 }
 
 export function showRemoveContainerModal(containerName: string, containerId: string, table: DataTables.Api) {
@@ -252,13 +106,3 @@ export function showRemoveContainerModal(containerName: string, containerId: str
     }).modal('show')
 }
 
-export function initAppDropDown() {
-    // make checkboxes visible without label
-    $('.checkbox').checkbox();
-    $('#app-dropdown').dropdown({
-        onChange: function (value, text, $selectedItem) {
-            $('#app-dropdown').dropdown('set selected', value);
-            loadApp(value)
-        }
-    });
-}

@@ -24,9 +24,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type TemplateName struct {
+	Uuid string `json:"uuid"`
+	Name string `json:"name"`
+}
+
 type fileProvider struct {
 	configFile string
-	apps       []*App
+	apps       []*Template
 }
 
 var mu sync.Mutex
@@ -54,7 +59,7 @@ func (p *fileProvider) loadConfigFile() {
 	str := string(yamlFileBytes)
 
 	// unmarshal yaml file
-	config := []*App{}
+	config := []*Template{}
 	err = yaml.UnmarshalStrict([]byte(str), &config)
 	util.CheckErr(err)
 
@@ -75,7 +80,7 @@ func (p *fileProvider) saveConfigFile() {
 	util.CheckErr(err)
 }
 
-func (p *fileProvider) UpdateApp(app App) {
+func (p *fileProvider) UpdateApp(app Template) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -94,14 +99,19 @@ func (p *fileProvider) UpdateApp(app App) {
 	log.Debugf("Update configuration for app '%s': %+v", app.Name, app)
 }
 
-func (p *fileProvider) GetAllTemplates() []*App {
+func (p *fileProvider) GetAllTemplates() *[]TemplateName {
 	mu.Lock()
 	defer mu.Unlock()
 
-	return p.apps
+	res := make([]TemplateName, len(p.apps))
+	for i, app := range p.apps {
+		res[i] = TemplateName{Uuid: "hgjg", Name: app.Name}
+	}
+
+	return &res
 }
 
-func (p *fileProvider) GetTemplateByName(name string) *App {
+func (p *fileProvider) GetTemplateByName(name string) *Template {
 	mu.Lock()
 	defer mu.Unlock()
 

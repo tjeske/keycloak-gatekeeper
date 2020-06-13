@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Nerzal/gocloak/v4"
+	"github.com/Nerzal/gocloak/v5"
 	"github.com/go-chi/chi"
 )
 

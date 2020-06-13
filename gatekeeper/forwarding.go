@@ -30,7 +30,7 @@ import (
 
 type userContainer struct {
 	user      string
-	container *mystorage.App
+	container *mystorage.Template
 }
 
 // var appInfo *config.Config

@@ -50,7 +50,7 @@ func NewMongoDbProvider(host, user, password, database string) StorageProvider {
 	return &mongoDbProvider{client: client, collection: collection}
 }
 
-func (p *mongoDbProvider) UpdateApp(app App) {
+func (p *mongoDbProvider) UpdateApp(app Template) {
 	filter := bson.M{"Name": app.Name}
 	options := options.Replace()
 	options.SetUpsert(true)
@@ -61,24 +61,30 @@ func (p *mongoDbProvider) UpdateApp(app App) {
 	log.Debugf("Update configuration for app '%s': %+v -> %+v", app.Name, app, documentReturned)
 }
 
-func (p *mongoDbProvider) GetAllTemplates() []*App {
-	var apps []*App
+func (p *mongoDbProvider) GetAllTemplates() *[]TemplateName {
+	var apps []*Template
 	filter := bson.M{}
 	cur, err := p.collection.Find(context.TODO(), filter)
 	util.CheckErrMsg(err, "Error on Finding all the documents")
 
 	for cur.Next(context.TODO()) {
-		var app App
+		var app Template
 		err = cur.Decode(&app)
 		util.CheckErrMsg(err, "Error on Decoding the document")
 
 		apps = append(apps, &app)
 	}
-	return apps
+
+	res := make([]TemplateName, len(apps))
+	for i, app := range apps {
+		res[i] = TemplateName{Uuid: "hgjg", Name: app.Name}
+	}
+
+	return &res
 }
 
-func (p *mongoDbProvider) GetTemplateByName(name string) *App {
-	var app App
+func (p *mongoDbProvider) GetTemplateByName(name string) *Template {
+	var app Template
 	filter := bson.M{"Name": app.Name}
 	documentReturned := p.collection.FindOne(context.TODO(), filter)
 	documentReturned.Decode(&app)
